@@ -831,6 +831,7 @@
             const baseCol = new THREE.Color(hex);
             const lightCol = baseCol.clone().lerp(new THREE.Color('#ffffff'), 0.45);
             const darkCol = baseCol.clone().lerp(new THREE.Color('#3b2314'), 0.12);
+            document.body.style.background = `radial-gradient(circle at 50% 45%, #fff9f5 0%, #f3e4d8 65%, #e4cebc 100%)`;
             document.body.style.background = `radial-gradient(circle at 50% 45%, #${lightCol.getHexString()} 0%, #${baseCol.getHexString()} 65%, #${darkCol.getHexString()} 100%)`;
             renderStageBackgroundPattern();
         }
@@ -2002,23 +2003,29 @@
             }
         }
 
-        function getPackagingScreenBounds() {
+        function computeProjectedBagBounds(targetW, targetH) {
             camera.updateMatrixWorld();
-            const rect = container.getBoundingClientRect();
             const topLeft3D = new THREE.Vector3(-1.78, 4.15, 0.5).project(camera);
             const bottomRight3D = new THREE.Vector3(1.78, -4.95, 0.5).project(camera);
 
-            const minX = ((topLeft3D.x + 1) / 2) * rect.width;
-            const maxX = ((bottomRight3D.x + 1) / 2) * rect.width;
-            const minY = ((-topLeft3D.y + 1) / 2) * rect.height;
-            const maxY = ((-bottomRight3D.y + 1) / 2) * rect.height;
-
-            wrapBoundGuide.style.left = `${minX}px`;
-            wrapBoundGuide.style.top = `${minY}px`;
-            wrapBoundGuide.style.width = `${maxX - minX}px`;
-            wrapBoundGuide.style.height = `${maxY - minY}px`;
+            const minX = ((topLeft3D.x + 1) / 2) * targetW;
+            const maxX = ((bottomRight3D.x + 1) / 2) * targetW;
+            const minY = ((-topLeft3D.y + 1) / 2) * targetH;
+            const maxY = ((-bottomRight3D.y + 1) / 2) * targetH;
 
             return { minX, maxX, minY, maxY };
+        }
+
+        function getPackagingScreenBounds() {
+            const rect = container.getBoundingClientRect();
+            const b = computeProjectedBagBounds(rect.width, rect.height);
+
+            wrapBoundGuide.style.left = `${b.minX}px`;
+            wrapBoundGuide.style.top = `${b.minY}px`;
+            wrapBoundGuide.style.width = `${b.maxX - b.minX}px`;
+            wrapBoundGuide.style.height = `${b.maxY - b.minY}px`;
+
+            return b;
         }
 
         function clampStickerToPackaging(stickerData) {
@@ -3095,28 +3102,35 @@
 
             const stageW = container.clientWidth;
             const stageH = container.clientHeight;
+            const oldBounds = computeProjectedBagBounds(stageW, stageH);
+            const oldBagW = Math.max(1, oldBounds.maxX - oldBounds.minX);
+            const oldBagH = Math.max(1, oldBounds.maxY - oldBounds.minY);
 
             const exportW = 1200;
             const exportH = 1600;
-            const targetAspect = exportW / exportH;
-
-            let cropW, cropH, cropX, cropY;
-            if (stageW / stageH > targetAspect) {
-                cropH = stageH;
-                cropW = stageH * targetAspect;
-                cropX = (stageW - cropW) / 2;
-                cropY = 0;
-            } else {
-                cropW = stageW;
-                cropH = stageW / targetAspect;
-                cropX = 0;
-                cropY = (stageH - cropH) / 2;
-            }
+            const targetAspect = exportW / exportH; 
 
             const originalPixelRatio = renderer.getPixelRatio();
-            const renderScale = 3;
-            renderer.setPixelRatio(renderScale);
-            renderer.setSize(stageW, stageH);
+
+            const fovRad = THREE.MathUtils.degToRad(camera.fov);
+            const exportRequiredHeight = 14.2;
+            const exportRequiredWidth = 6.8;
+            const distH = (exportRequiredHeight / 2) / Math.tan(fovRad / 2);
+            const distW = (exportRequiredWidth / 2) / (Math.tan(fovRad / 2) * targetAspect);
+            const exportDist = Math.max(distH, distW, 14.5);
+
+            camera.aspect = targetAspect;
+            camera.position.set(0, 0.25, exportDist);
+            camera.lookAt(0, 0.25, 0);
+            camera.updateProjectionMatrix();
+            camera.updateMatrixWorld();
+
+            renderer.setPixelRatio(1);
+            renderer.setSize(exportW, exportH, false);
+
+            const exportBounds = computeProjectedBagBounds(exportW, exportH);
+            const exportBagW = Math.max(1, exportBounds.maxX - exportBounds.minX);
+            const exportBagH = Math.max(1, exportBounds.maxY - exportBounds.minY);
 
             const exportCanvas = document.createElement('canvas');
             exportCanvas.width = exportW;
@@ -3148,19 +3162,19 @@
             kraftTagGroup.visible = false;
             renderer.render(scene, camera);
 
-            eCtx.drawImage(
-                renderer.domElement,
-                cropX * renderScale, cropY * renderScale, cropW * renderScale, cropH * renderScale,
-                0, 0, exportW, exportH
-            );
+            eCtx.drawImage(renderer.domElement, 0, 0, exportW, exportH);
 
             if (state.wrapped) {
-                const scaleFactor = exportW / cropW;
+                const scaleFactor = exportBagW / oldBagW;
                 stickersList.forEach(st => {
-                    eCtx.save();
-                    const tx = (st.x - cropX) * scaleFactor;
-                    const ty = (st.y - cropY) * scaleFactor;
+                    const relX = (st.x - oldBounds.minX) / oldBagW;
+                    const relY = (st.y - oldBounds.minY) / oldBagH;
+
+                    const tx = exportBounds.minX + relX * exportBagW;
+                    const ty = exportBounds.minY + relY * exportBagH;
                     const drawSize = st.size * scaleFactor;
+
+                    eCtx.save();
                     eCtx.translate(tx, ty);
                     eCtx.rotate((st.rotation * Math.PI) / 180);
                     eCtx.drawImage(st.canvasSource, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
@@ -3174,11 +3188,7 @@
                 kraftTagGroup.visible = state.tagActive;
                 renderer.render(scene, camera);
 
-                eCtx.drawImage(
-                    renderer.domElement,
-                    cropX * renderScale, cropY * renderScale, cropW * renderScale, cropH * renderScale,
-                    0, 0, exportW, exportH
-                );
+                eCtx.drawImage(renderer.domElement, 0, 0, exportW, exportH);
             }
 
             const creditStr = (state.creditText || '').trim();
@@ -3194,7 +3204,7 @@
             }
 
             renderer.setPixelRatio(originalPixelRatio);
-            renderer.setSize(stageW, stageH);
+            adjustResponsiveSize();
             renderMultiLayerScene();
 
             const dataURL = exportCanvas.toDataURL('image/png');
