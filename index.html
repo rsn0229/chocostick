@@ -1,0 +1,3094 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>수제 막대과자</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Noto Sans KR', sans-serif;
+            background: radial-gradient(circle at 50% 45%, #fff9f5 0%, #f3e4d8 65%, #e4cebc 100%);
+            transition: background 0.3s ease;
+        }
+
+        #bg-pattern-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+        #app-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 720px;
+            height: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+            background: transparent;
+            z-index: 1;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        #sticker-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            overflow: hidden;
+            transition: opacity 0.2s ease;
+        }
+
+        #front-overlay-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 8;
+            pointer-events: none;
+        }
+
+        #gizmo-overlay-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        #wrap-bound-guide {
+            position: absolute;
+            border: 1.5px dashed rgba(92, 58, 33, 0.28);
+            border-radius: 28px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #wrap-bound-guide.visible {
+            opacity: 1;
+        }
+        .sticker-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+            pointer-events: auto;
+            cursor: grab;
+            touch-action: none;
+        }
+        .sticker-item:active {
+            cursor: grabbing;
+        }
+        .sticker-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+            user-select: none;
+        }
+        .sticker-gizmo-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+            border: 2px dashed #5c3a21;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+            display: none;
+        }
+        .sticker-gizmo-box.active {
+            display: block;
+        }
+        .gizmo-scale-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border: 2.5px solid #5c3a21;
+            border-radius: 4px;
+            pointer-events: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .handle-tl { top: -8px; left: -8px; cursor: nwse-resize; }
+        .handle-bl { bottom: -8px; left: -8px; cursor: nesw-resize; }
+        .handle-br { bottom: -8px; right: -8px; cursor: nwse-resize; }
+
+        .gizmo-delete-btn {
+            position: absolute;
+            top: -13px;
+            right: -13px;
+            width: 26px;
+            height: 26px;
+            border-radius: 9999px;
+            background: #e63946;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+            transition: transform 0.15s ease;
+        }
+        .gizmo-delete-btn:hover {
+            transform: scale(1.12);
+        }
+
+        .gizmo-rotate-line {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            width: 2px;
+            height: 18px;
+            background: #5c3a21;
+            transform: translateX(-50%);
+        }
+        .gizmo-rotate-btn {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 9999px;
+            background: #ffffff;
+            color: #5c3a21;
+            border: 2px solid #5c3a21;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: grab;
+            pointer-events: auto;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.22);
+        }
+        .gizmo-rotate-btn:active {
+            cursor: grabbing;
+            background: #5c3a21;
+            color: #ffffff;
+        }
+
+        .glass-panel {
+            background: rgba(255, 252, 249, 0.90);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 10px 30px rgba(92, 58, 33, 0.14);
+        }
+        .tool-btn {
+            transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .tool-btn:hover {
+            transform: scale(1.06);
+        }
+        .tool-btn:active {
+            transform: scale(0.95);
+        }
+        .tool-btn.active {
+            background: #5c3a21;
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(92, 58, 33, 0.35);
+            border-color: #5c3a21;
+        }
+        .swatch-btn {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .swatch-btn.selected {
+            transform: scale(1.12);
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5c3a21;
+        }
+        .popover-enter {
+            animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-pattern-canvas"></canvas>
+
+    <div id="app-wrapper">
+
+        <div id="canvas-container"></div>
+
+        <div id="sticker-layer">
+            <div id="wrap-bound-guide"></div>
+        </div>
+
+        <canvas id="front-overlay-canvas"></canvas>
+
+        <div id="gizmo-overlay-layer"></div>
+
+        <div id="credit-preview" class="absolute bottom-3 left-4 z-15 pointer-events-none text-xs font-medium tracking-wide opacity-85 hidden" style="color: #ffffff;"></div>
+
+        <header class="absolute top-3 left-0 right-0 z-20 px-3 md:px-5 flex flex-col items-center gap-2 pointer-events-none">
+
+            <div class="w-full flex items-center justify-end">
+                <div class="flex items-center gap-1.5 pointer-events-auto">
+                    <button id="btn-reset" title="처음 상태로 초기화" class="tool-btn glass-panel hover:bg-white text-amber-950 px-3 py-2 rounded-full flex items-center gap-1 text-xs font-semibold">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="hidden sm:inline">초기화</span>
+                    </button>
+                    <button id="btn-download" class="tool-btn bg-amber-900 hover:bg-amber-800 text-white px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-lg text-xs font-semibold">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>이미지 저장</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel px-3.5 py-1.5 rounded-full flex items-center gap-3 pointer-events-auto shadow-md">
+                <label for="sync-toggle" class="flex items-center cursor-pointer gap-2">
+                    <span class="text-xs font-bold text-amber-950">동일한 디자인</span>
+                    <div class="relative">
+                        <input type="checkbox" id="sync-toggle" class="sr-only" checked>
+                        <div id="sync-bg" class="w-10 h-5 bg-amber-900 rounded-full shadow-inner transition-colors duration-200"></div>
+                        <div id="sync-dot" class="dot absolute w-4 h-4 bg-white rounded-full shadow left-0.5 top-0.5 transition-transform duration-200 translate-x-5"></div>
+                    </div>
+                </label>
+
+                <div id="stick-selector" class="hidden flex items-center bg-amber-950/10 p-0.5 rounded-full border border-amber-900/15">
+                    <button data-stick="0" class="stick-tab-btn px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-900 text-white shadow-sm transition">
+                        왼쪽
+                    </button>
+                    <button data-stick="1" class="stick-tab-btn px-2.5 py-1 rounded-full text-[11px] font-bold text-amber-900 hover:text-amber-950 transition">
+                        오른쪽
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="absolute z-20 left-2.5 md:left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2.5">
+            <button data-panel="panel-choco" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-droplet"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">초코</span>
+            </button>
+
+            <button data-panel="panel-topping" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">토핑</span>
+            </button>
+
+            <button data-panel="panel-drizzle" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-wave-square"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">드리즐</span>
+            </button>
+
+            <button data-panel="panel-plaque" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-cookie-bite"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">판초코</span>
+            </button>
+        </nav>
+
+        <nav class="absolute z-20 right-2.5 md:right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2.5">
+            <button data-panel="panel-wrap" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-gift"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">포장</span>
+            </button>
+
+            <button data-panel="panel-tag" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-tag"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">태그</span>
+            </button>
+
+<button data-panel="panel-bg" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-fill-drip"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">배경</span>
+            </button>
+
+            <button data-panel="panel-credit" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+                <span class="text-base"><i class="fa-solid fa-copyright"></i></span>
+                <span class="text-[10px] font-bold mt-0.5">출처</span>
+            </button>
+        </nav>
+
+        <div id="popover-wrapper" class="absolute z-30 bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-sm pointer-events-none">
+
+            <div id="panel-choco" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold text-amber-950">
+                        <i class="fa-solid fa-droplet mr-1.5 text-amber-800"></i>초콜릿 코팅 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
+                    </span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="grid grid-cols-5 gap-2 text-center">
+                    <button data-choco-hex="#3e2115" class="choco-opt swatch-btn selected flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full shadow-inner border border-black/15" style="background: #3e2115;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">다크</span>
+                    </button>
+                    <button data-choco-hex="#f3e3c6" class="choco-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full shadow-inner border border-amber-300" style="background: #f3e3c6;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">화이트</span>
+                    </button>
+                    <button data-choco-hex="#f48fb1" class="choco-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full shadow-inner border border-pink-200" style="background: #f48fb1;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">딸기</span>
+                    </button>
+                    <button data-choco-hex="#68c4af" class="choco-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full shadow-inner border border-teal-200" style="background: #68c4af;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">민트</span>
+                    </button>
+                    <button id="btn-palette-choco" class="swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/80 hover:bg-white border border-amber-900/20">
+                        <span class="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white text-xs" style="background: conic-gradient(#ff6b8b, #ffd166, #06d6a0, #70d6ff, #c77dff, #ff6b8b);">
+                            <i class="fa-solid fa-palette drop-shadow"></i>
+                        </span>
+                        <span class="text-[11px] font-bold text-amber-950">팔레트</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-topping" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-bold text-amber-950">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1.5 text-amber-800"></i>토핑 조합 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
+                    </span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="text-[11px] text-amber-800/80 mb-2.5">복수 선택이 가능합니다.</p>
+                <div class="grid grid-cols-5 gap-1.5 text-center">
+                    <button data-topping="hearts" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🩷</span>
+                        <span class="text-[11px] font-medium text-amber-950">하트</span>
+                    </button>
+                    <button data-topping="stars" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">⭐</span>
+                        <span class="text-[11px] font-medium text-amber-950">별</span>
+                    </button>
+                    <button data-topping="sprinkles" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🌈</span>
+                        <span class="text-[11px] font-medium text-amber-950">스프링클</span>
+                    </button>
+                    <button data-topping="pearls" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🫧</span>
+                        <span class="text-[11px] font-medium text-amber-950">진주초코</span>
+                    </button>
+                    <button data-topping="crunch" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🍪</span>
+                        <span class="text-[11px] font-medium text-amber-950">크런치</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-drizzle" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold text-amber-950">
+                        <i class="fa-solid fa-wave-square mr-1.5 text-amber-800"></i>드리즐 초코 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
+                    </span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="grid grid-cols-5 gap-2 text-center">
+                    <button data-drizzle-hex="none" class="drizzle-opt swatch-btn selected flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs"><i class="fa-solid fa-ban"></i></span>
+                        <span class="text-[11px] font-medium text-amber-950">없음</span>
+                    </button>
+                    <button data-drizzle-hex="#3e2115" class="drizzle-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-black/10" style="background: #3e2115;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">다크</span>
+                    </button>
+                    <button data-drizzle-hex="#f3e3c6" class="drizzle-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-amber-300" style="background: #f3e3c6;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">화이트</span>
+                    </button>
+                    <button data-drizzle-hex="#f48fb1" class="drizzle-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-pink-200" style="background: #f48fb1;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">딸기</span>
+                    </button>
+                    <button id="btn-palette-drizzle" class="swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/80 hover:bg-white border border-amber-900/20">
+                        <span class="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white text-xs" style="background: conic-gradient(#ff6b8b, #ffd166, #06d6a0, #70d6ff, #c77dff, #ff6b8b);">
+                            <i class="fa-solid fa-palette drop-shadow"></i>
+                        </span>
+                        <span class="text-[11px] font-bold text-amber-950">팔레트</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-plaque" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-bold text-amber-950">
+                        <i class="fa-solid fa-cookie-bite mr-1.5 text-amber-800"></i>판초콜릿 파츠 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
+                    </span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="text-[11px] text-amber-800 font-medium mb-2.5">판초콜릿을 드래그해 높이를 조절할 수 있습니다.</p>
+                
+                <div class="flex items-center justify-between bg-white/60 rounded-2xl px-3 py-2 mb-2.5">
+                    <span class="text-xs font-semibold text-amber-950">판초코 몰드 색상</span>
+                    <div class="flex items-center gap-2">
+                        <button data-plaque-border="#3e2115" class="plaque-border-btn w-6 h-6 rounded-full border-2 border-amber-900 scale-110" style="background:#3e2115;"></button>
+                        <button data-plaque-border="#f3e3c6" class="plaque-border-btn w-6 h-6 rounded-full border border-amber-300" style="background:#f3e3c6;"></button>
+                        <button data-plaque-border="#f48fb1" class="plaque-border-btn w-6 h-6 rounded-full border border-pink-300" style="background:#f48fb1;"></button>
+                        <button data-plaque-border="#68c4af" class="plaque-border-btn w-6 h-6 rounded-full border border-teal-300" style="background:#68c4af;"></button>
+                        <button id="btn-palette-plaque" class="w-6 h-6 rounded-full border border-amber-900/30 flex items-center justify-center text-[10px] text-white" style="background: conic-gradient(#ff6b8b, #ffd166, #06d6a0, #70d6ff, #c77dff, #ff6b8b);">
+                            <i class="fa-solid fa-palette drop-shadow"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mb-2">
+                    <label class="flex-1 cursor-pointer bg-amber-900 hover:bg-amber-800 text-white text-xs font-semibold py-2 px-3 rounded-2xl flex items-center justify-center gap-1.5 shadow transition">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>이미지(PNG)</span>
+                        <input id="input-plaque-img" type="file" accept="image/*" class="hidden">
+                    </label>
+                    <button id="btn-remove-plaque" class="bg-white/80 hover:bg-white text-amber-950 text-xs font-semibold py-2 px-3 rounded-2xl border border-amber-900/15 transition">
+                        제거
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-wrap" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold text-amber-950"><i class="fa-solid fa-gift mr-1.5 text-amber-800"></i>포장 & 스티커</span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded-2xl mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-amber-950 block">포장 & 리본 장식</span>
+                        <span class="text-[10px] text-amber-800/80">포장 해제 시 스티커·태그가 임시 숨김(보관)됩니다</span>
+                    </div>
+                    <button id="btn-toggle-wrap" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-900 text-white shadow transition">
+                        포장하기
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded-2xl mb-3">
+                    <span class="text-xs font-semibold text-amber-950">리본 색상</span>
+                    <div class="flex items-center gap-2">
+                        <button data-ribbon="#7eb6ff" class="ribbon-color-btn w-6 h-6 rounded-full border-2 border-amber-950 scale-110" style="background:#7eb6ff;"></button>
+                        <button data-ribbon="#d96b6b" class="ribbon-color-btn w-6 h-6 rounded-full border border-red-900" style="background:#d96b6b;"></button>
+                        <button data-ribbon="#f48fb1" class="ribbon-color-btn w-6 h-6 rounded-full border border-pink-300" style="background:#f48fb1;"></button>
+                        <button data-ribbon="#d4a359" class="ribbon-color-btn w-6 h-6 rounded-full border border-amber-300" style="background:#d4a359;"></button>
+                        <button id="btn-palette-ribbon" class="w-6 h-6 rounded-full border border-amber-900/30 flex items-center justify-center text-[10px] text-white" style="background: conic-gradient(#ff6b8b, #ffd166, #06d6a0, #70d6ff, #c77dff, #ff6b8b);">
+                            <i class="fa-solid fa-palette drop-shadow"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-amber-900/15 pt-2.5">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-amber-950">스티커 붙이기</span>
+                        <span class="text-[10px] text-amber-800/80">여러 장을 추가할 수 있습니다.</span>
+                    </div>
+                    <div class="flex gap-1.5 mb-2">
+                        <label class="flex-1 cursor-pointer bg-amber-800 hover:bg-amber-700 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>이미지 추가</span>
+                            <input id="input-sticker-img" type="file" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-tag" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold text-amber-950"><i class="fa-solid fa-tag mr-1.5 text-amber-800"></i>크라프트 태그</span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded-2xl mb-2.5">
+                    <div>
+                        <span class="text-xs font-semibold text-amber-950 block">상단 크라프트 태그 부착</span>
+                        <span class="text-[10px] text-amber-800/80">태그 부착 시 비닐 포장이 자동으로 함께 켜집니다</span>
+                    </div>
+                    <button id="btn-toggle-tag" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-900 text-white shadow transition">
+                        태그 부착
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-medium text-amber-900">영문 필기체 메시지 (최대 22자)</label>
+                    <input id="input-tag-text" type="text" maxlength="22" value="For You, Sweetheart" placeholder="예: Anchor and Waves"
+                        class="w-full px-3.5 py-2 rounded-xl bg-white border border-amber-900/20 text-amber-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-800">
+                </div>
+            </div>
+
+            <div id="panel-bg" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-amber-950"><i class="fa-solid fa-fill-drip mr-1.5 text-amber-800"></i>배경 & 스트라이프</span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded-2xl mb-2.5">
+                    <div>
+                        <span class="text-xs font-bold text-amber-950 block">사선 스트라이프 배경</span>
+                    </div>
+                    <button id="btn-toggle-stripe" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-900 text-white shadow transition">
+                        켜기
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-5 gap-2 text-center">
+                    <button data-bg-hex="#f3e4d8" class="bg-opt swatch-btn selected flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-amber-300" style="background: #f3e4d8;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">베이지</span>
+                    </button>
+                    <button data-bg-hex="#fce4ec" class="bg-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-pink-200" style="background: #fce4ec;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">연분홍</span>
+                    </button>
+                    <button data-bg-hex="#e3f2fd" class="bg-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-blue-200" style="background: #e3f2fd;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">연하늘</span>
+                    </button>
+                    <button data-bg-hex="#fff8e1" class="bg-opt swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
+                        <span class="w-7 h-7 rounded-full border border-yellow-200" style="background: #fff8e1;"></span>
+                        <span class="text-[11px] font-medium text-amber-950">연노랑</span>
+                    </button>
+                    <button id="btn-palette-bg" class="swatch-btn flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/80 hover:bg-white border border-amber-900/20">
+                        <span class="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white text-xs" style="background: conic-gradient(#ff6b8b, #ffd166, #06d6a0, #70d6ff, #c77dff, #ff6b8b);">
+                            <i class="fa-solid fa-palette drop-shadow"></i>
+                        </span>
+                        <span class="text-[11px] font-bold text-amber-950">팔레트</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-credit" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-amber-950"><i class="fa-solid fa-copyright mr-1.5 text-amber-800"></i>이미지 출처 표기 (선택사항)</span>
+                    <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="text-[11px] text-amber-800/80 mb-2.5">입력 시 이미지 좌측 하단에 표기되며, 비워두면 아무것도 출력되지 않습니다.</p>
+
+                <div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded-2xl mb-2.5">
+                    <span class="text-xs font-semibold text-amber-950">글자 색상 반전 <span id="credit-color-label" class="text-[11px] font-bold text-amber-800 ml-1">(현재: 흰색)</span></span>
+                    <button id="btn-toggle-credit-invert" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-900 text-white shadow transition">
+                        검정 글씨로 변경
+                    </button>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-[11px] font-medium text-amber-900">출처 문구 입력 (최대 40자)</label>
+                    <input id="input-credit-text" type="text" maxlength="40" value="" placeholder="예: Illust by @커미션주"
+                        class="w-full px-3.5 py-2 rounded-xl bg-white border border-amber-900/20 text-amber-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-800">
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-msg" class="absolute top-24 left-1/2 -translate-x-1/2 z-40 glass-panel px-4 py-2.5 rounded-full text-xs font-semibold text-amber-950 shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 whitespace-nowrap">
+            이미지를 저장했습니다!
+        </div>
+    </div>
+
+    <div id="custom-color-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+        <div class="glass-panel rounded-3xl p-4 w-full max-w-xs shadow-2xl popover-enter">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span id="picker-color-preview" class="w-6 h-6 rounded-full border border-black/20 shadow-inner" style="background: #f48fb1;"></span>
+                    <span id="picker-title" class="text-xs font-bold text-amber-950">색상 팔레트 지정</span>
+                </div>
+                <button id="btn-close-picker" class="text-amber-900/70 hover:text-amber-950 text-sm px-1.5"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="relative w-full h-40 rounded-2xl overflow-hidden mb-3 border border-amber-900/15 shadow-inner touch-none">
+                <canvas id="sv-canvas" width="260" height="160" class="w-full h-full cursor-crosshair"></canvas>
+                <div id="sv-cursor" class="pointer-events-none absolute w-4 h-4 rounded-full border-2 border-white shadow-md -translate-x-1/2 -translate-y-1/2" style="top: 30%; left: 70%; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4);"></div>
+            </div>
+
+            <div class="relative w-full h-5 rounded-full overflow-hidden mb-3 border border-amber-900/15 shadow-inner touch-none">
+                <canvas id="hue-canvas" width="260" height="20" class="w-full h-full cursor-pointer"></canvas>
+                <div id="hue-cursor" class="pointer-events-none absolute top-0 bottom-0 w-2.5 bg-white rounded-full border border-black/40 -translate-x-1/2" style="left: 50%;"></div>
+            </div>
+
+            <div class="grid grid-cols-8 gap-1.5 mb-3">
+                <button data-quick-hex="#3e2115" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#3e2115;"></button>
+                <button data-quick-hex="#6e3f27" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#6e3f27;"></button>
+                <button data-quick-hex="#f3e3c6" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#f3e3c6;"></button>
+                <button data-quick-hex="#f48fb1" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#f48fb1;"></button>
+                <button data-quick-hex="#ff5c8a" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#ff5c8a;"></button>
+                <button data-quick-hex="#ffd166" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#ffd166;"></button>
+                <button data-quick-hex="#68c4af" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#68c4af;"></button>
+                <button data-quick-hex="#7eb6ff" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#7eb6ff;"></button>
+                <button data-quick-hex="#b39ddb" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#b39ddb;"></button>
+                <button data-quick-hex="#95d5b2" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#95d5b2;"></button>
+                <button data-quick-hex="#f4a261" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#f4a261;"></button>
+                <button data-quick-hex="#e63946" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#e63946;"></button>
+                <button data-quick-hex="#d96b6b" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#d96b6b;"></button>
+                <button data-quick-hex="#e3f2fd" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#e3f2fd;"></button>
+                <button data-quick-hex="#fce4ec" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#fce4ec;"></button>
+                <button data-quick-hex="#f3e4d8" class="quick-swatch w-6 h-6 rounded-full border border-black/15" style="background:#f3e4d8;"></button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input id="picker-hex-input" type="text" value="#F48FB1" maxlength="7" class="w-24 px-2.5 py-1.5 rounded-xl bg-white border border-amber-900/20 text-xs font-mono text-center text-amber-950 uppercase">
+                <button id="btn-apply-picker" class="flex-1 bg-amber-900 hover:bg-amber-800 text-white text-xs font-bold py-2 rounded-xl shadow transition">
+                    색상 적용하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'pepero_atelier_saved_v37';
+
+        function createDefaultStickState() {
+            return {
+                chocoHex: '#3e2115',
+                toppings: {
+                    hearts: false,
+                    stars: false,
+                    sprinkles: false,
+                    pearls: false,
+                    crunch: false
+                },
+                drizzleHex: 'none',
+                plaqueBorderColor: '#3e2115',
+                plaqueActive: false,
+                plaqueImageSrc: null,
+                plaqueY: 1.45
+            };
+        }
+
+        const state = {
+            syncSticks: true,
+            activeStickIndex: 0,
+            sticksData: [
+                createDefaultStickState(),
+                createDefaultStickState()
+            ],
+            backupIndividualSticks: null,
+            wrapped: false,
+            ribbonColor: '#7eb6ff',
+            tagActive: false,
+            tagText: 'For You, Sweetheart',
+            bgColorHex: '#f3e4d8',
+            stripeBg: false,
+            creditText: '', 
+            creditInverted: false
+        };
+
+        function getTargetStickIndices() {
+            return state.syncSticks ? [0, 1] : [state.activeStickIndex];
+        }
+
+        function seededRandom(seed) {
+            let s = seed % 2147483647;
+            return function() {
+                s = (s * 16807) % 2147483647;
+                return (s - 1) / 2147483646;
+            };
+        }
+
+        function showToastMessage(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.add('opacity-0'), 2600);
+        }
+
+        function getStickChocoColor(hex) {
+            const c = new THREE.Color(hex);
+            const hsl = {};
+            c.getHSL(hsl);
+
+            const livelyS = hsl.s > 0.04 ? Math.min(1.0, hsl.s * 1.18 + 0.04) : hsl.s;
+            const livelyL = hsl.l > 0.5
+                ? Math.min(0.91, hsl.l * 1.02)
+                : Math.min(0.88, hsl.l * 1.06 + 0.01);
+
+            c.setHSL(hsl.h, livelyS, livelyL);
+            return c;
+        }
+
+        function getPlaqueSyncedRGB(hex) {
+            const c = new THREE.Color(hex);
+            const hsl = {};
+            c.getHSL(hsl);
+
+            const balancedS = hsl.s > 0.04 ? Math.min(0.95, hsl.s * 0.82 + 0.02) : hsl.s;
+            const brightL = hsl.l > 0.5
+                ? Math.min(0.94, hsl.l * 1.03 + 0.015)
+                : Math.min(0.90, hsl.l * 1.10 + 0.025);
+
+            c.setHSL(hsl.h, balancedS, brightL);
+            return {
+                r: Math.round(c.r * 255),
+                g: Math.round(c.g * 255),
+                b: Math.round(c.b * 255),
+                threeCol: c
+            };
+        }
+
+        const bgPatternCanvas = document.getElementById('bg-pattern-canvas');
+
+        function getAutoStripeColorHex(baseHex) {
+            const c = new THREE.Color(baseHex);
+            const hsl = {};
+            c.getHSL(hsl);
+
+            const stripeCol = new THREE.Color();
+            if (hsl.l >= 0.62) {
+                const targetL = Math.max(0.20, hsl.l - 0.024);
+                const targetS = Math.min(0.85, hsl.s + 0.015);
+                stripeCol.setHSL(hsl.h, targetS, targetL);
+            } else {
+                const targetL = Math.min(0.95, hsl.l + 0.032);
+                const targetS = Math.max(0.10, hsl.s - 0.015);
+                stripeCol.setHSL(hsl.h, targetS, targetL);
+            }
+            return `#${stripeCol.getHexString()}`;
+        }
+
+        function drawDiagonalStripesOnContext(ctx, w, h, baseHex, refWidth) {
+            const stripeHex = getAutoStripeColorHex(baseHex);
+            ctx.save();
+            ctx.fillStyle = stripeHex;
+            ctx.globalAlpha = 0.35;
+            ctx.translate(w / 2, h / 2);
+            ctx.rotate(Math.PI / 4);
+
+            const diagLength = Math.hypot(w, h) * 1.25;
+            const stripeWidth = (refWidth || w) / 7.5;
+            const period = stripeWidth * 2;
+
+            const startK = Math.floor(-diagLength / period) - 1;
+            const endK = Math.ceil(diagLength / period) + 1;
+
+            for (let k = startK; k <= endK; k++) {
+                const x = k * period - stripeWidth / 2;
+                ctx.fillRect(x, -diagLength, stripeWidth, diagLength * 2);
+            }
+            ctx.restore();
+        }
+
+        function renderStageBackgroundPattern() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            bgPatternCanvas.width = w * dpr;
+            bgPatternCanvas.height = h * dpr;
+            const ctx = bgPatternCanvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, w, h);
+
+            if (state.stripeBg) {
+                const wrapperW = Math.min(w, 720);
+                drawDiagonalStripesOnContext(ctx, w, h, state.bgColorHex, wrapperW);
+            }
+        }
+
+        function updateBackgroundStyle(hex) {
+            state.bgColorHex = hex;
+            const baseCol = new THREE.Color(hex);
+            const lightCol = baseCol.clone().lerp(new THREE.Color('#ffffff'), 0.45);
+            const darkCol = baseCol.clone().lerp(new THREE.Color('#3b2314'), 0.12);
+            document.body.style.background = `radial-gradient(circle at 50% 45%, #${lightCol.getHexString()} 0%, #${baseCol.getHexString()} 65%, #${darkCol.getHexString()} 100%)`;
+            renderStageBackgroundPattern();
+        }
+
+        const container = document.getElementById('canvas-container');
+        const frontOverlayCanvas = document.getElementById('front-overlay-canvas');
+        const frontOverlayCtx = frontOverlayCanvas.getContext('2d');
+
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.NoToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xfffaf4, 0.65);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xfffcf7, 0.34);
+        keyLight.position.set(4.5, 6, 11);
+        keyLight.castShadow = true;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0xf5ebe1, 0.18);
+        fillLight.position.set(-5.5, -2, 8);
+        scene.add(fillLight);
+
+        const masterGroup = new THREE.Group();
+        scene.add(masterGroup);
+
+        function createBiscuitTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 256;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#e3c59e';
+            ctx.fillRect(0, 0, 256, 256);
+
+            for (let i = 0; i < 2000; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const r = Math.random() * 2.0 + 0.5;
+                ctx.fillStyle = Math.random() > 0.48 ? 'rgba(180, 135, 85, 0.14)' : 'rgba(255, 240, 215, 0.22)';
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(1, 4);
+            tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        }
+
+        const biscuitMaterial = new THREE.MeshStandardMaterial({
+            map: createBiscuitTexture(),
+            roughness: 0.86,
+            metalness: 0.0
+        });
+
+        function fixLatheSeamNormals(latheGeo, segments) {
+            latheGeo.computeVertexNormals();
+            const normAttr = latheGeo.attributes.normal;
+            const ringCount = normAttr.count / (segments + 1);
+
+            const n0 = new THREE.Vector3();
+            const nEnd = new THREE.Vector3();
+            const nAvg = new THREE.Vector3();
+
+            for (let i = 0; i < ringCount; i++) {
+                const idxStart = i;
+                const idxEnd = segments * ringCount + i;
+
+                n0.fromBufferAttribute(normAttr, idxStart);
+                nEnd.fromBufferAttribute(normAttr, idxEnd);
+                nAvg.addVectors(n0, nEnd).normalize();
+
+                normAttr.setXYZ(idxStart, nAvg.x, nAvg.y, nAvg.z);
+                normAttr.setXYZ(idxEnd, nAvg.x, nAvg.y, nAvg.z);
+            }
+            normAttr.needsUpdate = true;
+        }
+
+        function createHeartGeometry() {
+            const x = 0, y = 0;
+            const heartShape = new THREE.Shape();
+            heartShape.moveTo(x + 0.25, y + 0.25);
+            heartShape.bezierCurveTo(x + 0.25, y + 0.25, x + 0.20, y, x, y);
+            heartShape.bezierCurveTo(x - 0.30, y, x - 0.30, y + 0.35, x - 0.30, y + 0.35);
+            heartShape.bezierCurveTo(x - 0.30, y + 0.55, x - 0.10, y + 0.77, x + 0.25, y + 0.95);
+            heartShape.bezierCurveTo(x + 0.60, y + 0.77, x + 0.80, y + 0.55, x + 0.80, y + 0.35);
+            heartShape.bezierCurveTo(x + 0.80, y + 0.35, x + 0.80, y, x + 0.50, y);
+            heartShape.bezierCurveTo(x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25);
+
+            const geo = new THREE.ExtrudeGeometry(heartShape, {
+                depth: 0.12,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: 0.035,
+                bevelThickness: 0.035
+            });
+            geo.center();
+            geo.scale(0.27, -0.27, 0.27);
+            return geo;
+        }
+
+        function createStarGeometry() {
+            const starShape = new THREE.Shape();
+            const spikes = 5;
+            const outerR = 0.52;
+            const innerR = 0.25;
+
+            for (let i = 0; i < spikes * 2; i++) {
+                const r = i % 2 === 0 ? outerR : innerR;
+                const angle = (i * Math.PI) / spikes - Math.PI / 2;
+                const sx = Math.cos(angle) * r;
+                const sy = Math.sin(angle) * r;
+                if (i === 0) starShape.moveTo(sx, sy);
+                else starShape.lineTo(sx, sy);
+            }
+            starShape.closePath();
+
+            const geo = new THREE.ExtrudeGeometry(starShape, {
+                depth: 0.11,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: 0.035,
+                bevelThickness: 0.035
+            });
+            geo.center();
+            geo.scale(0.30, 0.30, 0.30);
+            return geo;
+        }
+
+        const heartGeo = createHeartGeometry();
+        const starGeo = createStarGeometry();
+        const sprinkleGeo = new THREE.CylinderGeometry(0.042, 0.042, 0.27, 12);
+        const pearlGeo = new THREE.SphereGeometry(0.11, 16, 16);
+        const crunchGeo = new THREE.DodecahedronGeometry(0.14, 0);
+
+        const sticks = [];
+        const stickConfigs = [
+            { x: -0.86, yOffset: -0.76, rotZ:  0.045, seed: 105 },
+            { x:  0.86, yOffset: -0.74, rotZ: -0.008, seed: 209 }
+        ];
+
+        const CHOCO_BOTTOM_Y = -1.85;
+        const CHOCO_TOP_Y = 4.25;
+        const CHOCO_RADIUS = 0.445;
+
+        function getChocoOrganicWave(y, angle, seed) {
+            return (
+                Math.sin(y * 2.1 + angle * 2 + seed) * 0.015 +
+                Math.cos(y * 3.8 - angle + seed) * 0.009
+            );
+        }
+
+        function getExactChocoSurfaceRadius(y, angle, seed) {
+            const wave = getChocoOrganicWave(y, angle, seed);
+            return CHOCO_RADIUS * (1 + wave);
+        }
+
+        function createOrganicDrizzleGeometry(seed) {
+            const drizzlePoints = [];
+            const startY = CHOCO_BOTTOM_Y + 0.32;
+            const endY = CHOCO_TOP_Y - 0.30;
+            const totalHeight = endY - startY;
+
+            const numWaves = 26;
+            const steps = 320;
+
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+
+                const irregularT = t + (
+                    Math.sin(t * Math.PI * 5 + seed) * 0.016 +
+                    Math.cos(t * Math.PI * 11 + seed * 1.7) * 0.008
+                ) * Math.sin(t * Math.PI);
+
+                const clampedT = Math.max(0, Math.min(1, irregularT));
+                const y = startY + clampedT * totalHeight;
+
+                const ampMod = 0.96 + Math.sin(t * Math.PI * 7 + seed * 0.5) * 0.14 + Math.cos(t * Math.PI * 13) * 0.07;
+                const phaseJitter = Math.sin(t * Math.PI * 6 + seed) * 0.45;
+                const swing = Math.sin(t * Math.PI * numWaves + seed * 0.1 + phaseJitter) * (1.02 * ampMod);
+
+                const loopDriftY = Math.cos(t * Math.PI * numWaves * 2 + seed) * 0.032;
+                const finalY = Math.max(startY, Math.min(endY, y + loopDriftY));
+
+                const latheAngle = Math.atan2(Math.cos(swing), Math.sin(swing));
+                const surfaceR = getExactChocoSurfaceRadius(finalY, latheAngle, seed);
+                const radiusOffset = surfaceR + 0.016;
+
+                const x = Math.sin(swing) * radiusOffset;
+                const z = Math.cos(swing) * radiusOffset;
+                drizzlePoints.push(new THREE.Vector3(x, finalY, z));
+            }
+
+            const drizzleCurve = new THREE.CatmullRomCurve3(drizzlePoints);
+            const tubularSegments = 340;
+            const radialSegments = 10;
+            const baseRadius = 0.034;
+            const geo = new THREE.TubeGeometry(drizzleCurve, tubularSegments, baseRadius, radialSegments, false);
+
+            const pos = geo.attributes.position;
+            const ringSize = radialSegments + 1;
+
+            for (let seg = 0; seg <= tubularSegments; seg++) {
+                const u = seg / tubularSegments;
+                const centerPt = drizzleCurve.getPointAt(u);
+
+                const thicknessFactor =
+                    1.0 +
+                    Math.sin(u * Math.PI * 19 + seed) * 0.24 +
+                    Math.cos(u * Math.PI * 37 + seed * 2.1) * 0.14;
+
+                for (let r = 0; r < ringSize; r++) {
+                    const idx = seg * ringSize + r;
+                    const vx = pos.getX(idx);
+                    const vy = pos.getY(idx);
+                    const vz = pos.getZ(idx);
+
+                    pos.setX(idx, centerPt.x + (vx - centerPt.x) * (thicknessFactor * 0.72));
+                    pos.setY(idx, centerPt.y + (vy - centerPt.y) * thicknessFactor);
+                    pos.setZ(idx, centerPt.z + (vz - centerPt.z) * (thicknessFactor * 0.58));
+                }
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+
+        function createPeperoStick(cfg, stickIndex) {
+            const stickGroup = new THREE.Group();
+            stickGroup.position.set(cfg.x, cfg.yOffset, 0);
+            stickGroup.rotation.z = cfg.rotZ;
+
+            const initialColor = getStickChocoColor('#3e2115');
+            const stickChocoMaterial = new THREE.MeshStandardMaterial({
+                color: initialColor,
+                roughness: 0.70,
+                metalness: 0.01
+            });
+
+            const biscuitRadius = 0.35;
+            const biscuitBottomY = -4.2;
+            const biscuitTopY = 3.8;
+
+            const biscuitPoints = [];
+            const capSteps = 12;
+            for (let i = 0; i <= capSteps; i++) {
+                const a = (i / capSteps) * (Math.PI / 2);
+                const r = Math.sin(a) * biscuitRadius;
+                const y = biscuitBottomY + (1 - Math.cos(a)) * (biscuitRadius * 0.75);
+                biscuitPoints.push(new THREE.Vector2(r, y));
+            }
+            const bodySteps = 40;
+            const bodyStartY = biscuitBottomY + biscuitRadius * 0.75;
+            for (let i = 1; i <= bodySteps; i++) {
+                const t = i / bodySteps;
+                const y = bodyStartY + t * (biscuitTopY - bodyStartY);
+                biscuitPoints.push(new THREE.Vector2(biscuitRadius, y));
+            }
+
+            const biscuitSegments = 40;
+            const biscuitGeo = new THREE.LatheGeometry(biscuitPoints, biscuitSegments);
+            const bPos = biscuitGeo.attributes.position;
+            for (let i = 0; i < bPos.count; i++) {
+                const vx = bPos.getX(i);
+                const vy = bPos.getY(i);
+                const vz = bPos.getZ(i);
+                const angle = Math.atan2(vz, vx);
+                const bakedMicroBump =
+                    Math.sin(vy * 5.5 + angle * 3 + cfg.seed) * 0.006 +
+                    Math.cos(vy * 9.0 - angle * 2) * 0.003;
+                bPos.setX(i, vx * (1 + bakedMicroBump));
+                bPos.setZ(i, vz * (1 + bakedMicroBump));
+            }
+            fixLatheSeamNormals(biscuitGeo, biscuitSegments);
+            stickGroup.add(new THREE.Mesh(biscuitGeo, biscuitMaterial));
+
+            const chocoHeight = CHOCO_TOP_Y - CHOCO_BOTTOM_Y;
+            const chocoProfile = [];
+            const bottomRoundSteps = 16;
+            const bottomRoundHeight = 0.34;
+            for (let i = 0; i <= bottomRoundSteps; i++) {
+                const t = i / bottomRoundSteps;
+                const curve = Math.sin(t * (Math.PI / 2));
+                const r = (biscuitRadius * 0.90) + (CHOCO_RADIUS - biscuitRadius * 0.90) * curve;
+                const y = CHOCO_BOTTOM_Y + t * bottomRoundHeight;
+                chocoProfile.push(new THREE.Vector2(r, y));
+            }
+
+            const midSteps = 60;
+            const midStartY = CHOCO_BOTTOM_Y + bottomRoundHeight;
+            const midEndY = CHOCO_TOP_Y - 0.45;
+            for (let i = 1; i <= midSteps; i++) {
+                const t = i / midSteps;
+                const y = midStartY + t * (midEndY - midStartY);
+                chocoProfile.push(new THREE.Vector2(CHOCO_RADIUS, y));
+            }
+
+            const topDomeSteps = 18;
+            for (let i = 1; i <= topDomeSteps; i++) {
+                const t = i / topDomeSteps;
+                const a = t * (Math.PI / 2);
+                const r = Math.cos(a) * CHOCO_RADIUS;
+                const y = midEndY + Math.sin(a) * 0.45;
+                chocoProfile.push(new THREE.Vector2(r, y));
+            }
+
+            const chocoSegments = 64;
+            const chocoGeo = new THREE.LatheGeometry(chocoProfile, chocoSegments);
+            const cPos = chocoGeo.attributes.position;
+            for (let i = 0; i < cPos.count; i++) {
+                const vx = cPos.getX(i);
+                let vy = cPos.getY(i);
+                const vz = cPos.getZ(i);
+                const angle = Math.atan2(vz, vx);
+
+                const organicWave = getChocoOrganicWave(vy, angle, cfg.seed);
+
+                if (vy < CHOCO_BOTTOM_Y + 0.55) {
+                    const edgeWeight = Math.max(0, 1 - (vy - CHOCO_BOTTOM_Y) / 0.55);
+                    const frontDip = -Math.sin(angle) * 0.048;
+                    const subtleAsymmetry = Math.cos(angle * 2 + (stickIndex === 0 ? 0.4 : -0.4)) * 0.014;
+                    vy += (frontDip + subtleAsymmetry) * edgeWeight;
+                }
+
+                cPos.setX(i, vx * (1 + organicWave));
+                cPos.setY(i, vy);
+                cPos.setZ(i, vz * (1 + organicWave));
+            }
+            fixLatheSeamNormals(chocoGeo, chocoSegments);
+            stickGroup.add(new THREE.Mesh(chocoGeo, stickChocoMaterial));
+
+            const TOTAL_TOPPING_SLOTS = 38;
+            const rand = seededRandom(cfg.seed + 77);
+            const toppingSlots = [];
+
+            const heartColors = [0xff5c8a, 0xff8fab, 0xffccd5, 0xe63946];
+            const starColors = [0xffd166, 0xffe599, 0xffb3c6, 0xa8dadc, 0xc77dff];
+            const sprinkleColors = [0xff758f, 0xffd166, 0x70d6ff, 0xc77dff, 0x95d5b2, 0xffffff];
+            const pearlColors = [0xfff8eb, 0xfce1e4, 0xe8d5b7];
+            const crunchColors = [0xc68642, 0xa86828, 0xe0a96d, 0x6e4720];
+
+            const toppingsContainer = new THREE.Group();
+            stickGroup.add(toppingsContainer);
+
+            for (let i = 0; i < TOTAL_TOPPING_SLOTS; i++) {
+                const band = (i + rand() * 0.85) / TOTAL_TOPPING_SLOTS;
+                const y = (CHOCO_BOTTOM_Y + 0.45) + band * (chocoHeight - 0.92);
+                const theta = (rand() - 0.5) * Math.PI * 1.32;
+
+                const latheAngle = Math.atan2(Math.cos(theta), Math.sin(theta));
+                const surfaceR = getExactChocoSurfaceRadius(y, latheAngle, cfg.seed);
+                const normal = new THREE.Vector3(Math.sin(theta), 0, Math.cos(theta)).normalize();
+
+                const rHeart = surfaceR + 0.056;
+                const heartMesh = new THREE.Mesh(heartGeo, new THREE.MeshStandardMaterial({
+                    color: heartColors[Math.floor(rand() * heartColors.length)],
+                    roughness: 0.48
+                }));
+                heartMesh.position.set(Math.sin(theta) * rHeart, y, Math.cos(theta) * rHeart);
+                heartMesh.lookAt(heartMesh.position.clone().add(normal));
+                heartMesh.rotation.z = (rand() - 0.5) * 0.85;
+                heartMesh.visible = false;
+                toppingsContainer.add(heartMesh);
+
+                const rStar = surfaceR + 0.056;
+                const starMesh = new THREE.Mesh(starGeo, new THREE.MeshStandardMaterial({
+                    color: starColors[Math.floor(rand() * starColors.length)],
+                    roughness: 0.45
+                }));
+                starMesh.position.set(Math.sin(theta) * rStar, y, Math.cos(theta) * rStar);
+                starMesh.lookAt(starMesh.position.clone().add(normal));
+                starMesh.rotation.z = rand() * Math.PI * 2;
+                starMesh.visible = false;
+                toppingsContainer.add(starMesh);
+
+                const rSprinkle = surfaceR + 0.052;
+                const sprinkleHolder = new THREE.Group();
+                sprinkleHolder.position.set(Math.sin(theta) * rSprinkle, y, Math.cos(theta) * rSprinkle);
+                sprinkleHolder.lookAt(sprinkleHolder.position.clone().add(normal));
+
+                const spMat = new THREE.MeshStandardMaterial({
+                    color: sprinkleColors[Math.floor(rand() * sprinkleColors.length)],
+                    roughness: 0.48
+                });
+                const spGroup = new THREE.Group();
+                const cyl = new THREE.Mesh(sprinkleGeo, spMat);
+                const capGeo = new THREE.SphereGeometry(0.042, 10, 10);
+                const cap1 = new THREE.Mesh(capGeo, spMat);
+                cap1.position.y = 0.135;
+                const cap2 = new THREE.Mesh(capGeo, spMat);
+                cap2.position.y = -0.135;
+                spGroup.add(cyl, cap1, cap2);
+
+                spGroup.rotation.z = rand() * Math.PI * 2;
+                sprinkleHolder.add(spGroup);
+                sprinkleHolder.visible = false;
+                toppingsContainer.add(sprinkleHolder);
+
+                const rPearl = surfaceR + 0.068;
+                const pearlMesh = new THREE.Mesh(pearlGeo, new THREE.MeshStandardMaterial({
+                    color: pearlColors[Math.floor(rand() * pearlColors.length)],
+                    roughness: 0.35,
+                    metalness: 0.08
+                }));
+                pearlMesh.position.set(Math.sin(theta) * rPearl, y, Math.cos(theta) * rPearl);
+                const ps = 0.85 + rand() * 0.3;
+                pearlMesh.scale.set(ps, ps, ps);
+                pearlMesh.visible = false;
+                toppingsContainer.add(pearlMesh);
+
+                const rCrunch = surfaceR + 0.056;
+                const crunchMesh = new THREE.Mesh(crunchGeo, new THREE.MeshStandardMaterial({
+                    color: crunchColors[Math.floor(rand() * crunchColors.length)],
+                    roughness: 0.82
+                }));
+                crunchMesh.position.set(Math.sin(theta) * rCrunch, y, Math.cos(theta) * rCrunch);
+                crunchMesh.scale.set(0.8 + rand() * 0.5, 0.6 + rand() * 0.4, 0.45 + rand() * 0.3);
+                crunchMesh.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
+                crunchMesh.visible = false;
+                toppingsContainer.add(crunchMesh);
+
+                toppingSlots.push({
+                    hearts: heartMesh,
+                    stars: starMesh,
+                    sprinkles: sprinkleHolder,
+                    pearls: pearlMesh,
+                    crunch: crunchMesh
+                });
+            }
+
+            const drizzleGeo = createOrganicDrizzleGeometry(cfg.seed);
+            const drizzleMat = new THREE.MeshStandardMaterial({
+                color: getStickChocoColor('#f3e3c6'),
+                roughness: 0.70,
+                metalness: 0.01
+            });
+            const drizzleMesh = new THREE.Mesh(drizzleGeo, drizzleMat);
+            drizzleMesh.visible = false;
+            stickGroup.add(drizzleMesh);
+
+            const plaqueSlot = new THREE.Group();
+            const initialY = state.sticksData[stickIndex].plaqueY;
+            plaqueSlot.position.set(0, initialY, CHOCO_RADIUS + 0.105);
+            plaqueSlot.userData = { stickIndex };
+            stickGroup.add(plaqueSlot);
+
+            masterGroup.add(stickGroup);
+            return {
+                group: stickGroup,
+                seed: cfg.seed,
+                chocoMaterial: stickChocoMaterial,
+                toppingSlots,
+                drizzleMesh,
+                drizzleMat,
+                plaqueSlot
+            };
+        }
+
+        stickConfigs.forEach((cfg, idx) => sticks.push(createPeperoStick(cfg, idx)));
+
+        function setPlaqueSlotHeight(stickIdx, newY) {
+            const clampedY = Math.max(CHOCO_BOTTOM_Y + 0.75, Math.min(CHOCO_TOP_Y - 0.75, newY));
+            state.sticksData[stickIdx].plaqueY = clampedY;
+            const stick = sticks[stickIdx];
+            stick.plaqueSlot.position.set(0, clampedY, CHOCO_RADIUS + 0.105);
+        }
+
+        function updateStickToppings(stickIdx) {
+            const stickObj = sticks[stickIdx];
+            const tState = state.sticksData[stickIdx].toppings;
+            const activeTypes = Object.keys(tState).filter(k => tState[k]);
+
+            stickObj.toppingSlots.forEach((slot, idx) => {
+                slot.hearts.visible = false;
+                slot.stars.visible = false;
+                slot.sprinkles.visible = false;
+                slot.pearls.visible = false;
+                slot.crunch.visible = false;
+
+                if (activeTypes.length > 0) {
+                    const chosenType = activeTypes[idx % activeTypes.length];
+                    slot[chosenType].visible = true;
+                }
+            });
+        }
+
+        function getTrimmedImageCanvas(imgElement) {
+            const origW = imgElement.naturalWidth || imgElement.width || 256;
+            const origH = imgElement.naturalHeight || imgElement.height || 256;
+
+            const maxDim = 512;
+            const scale = Math.min(1, maxDim / Math.max(origW, origH));
+            const w = Math.max(1, Math.round(origW * scale));
+            const h = Math.max(1, Math.round(origH * scale));
+
+            const tempC = document.createElement('canvas');
+            tempC.width = w;
+            tempC.height = h;
+            const tCtx = tempC.getContext('2d');
+            tCtx.drawImage(imgElement, 0, 0, w, h);
+
+            const data = tCtx.getImageData(0, 0, w, h).data;
+            let minX = w, minY = h, maxX = 0, maxY = 0;
+            let found = false;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (data[(y * w + x) * 4 + 3] > 18) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found) return tempC;
+
+            const cropW = Math.max(8, maxX - minX + 1);
+            const cropH = Math.max(8, maxY - minY + 1);
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = cropW;
+            croppedCanvas.height = cropH;
+            croppedCanvas.getContext('2d').drawImage(tempC, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+            return croppedCanvas;
+        }
+
+        function applyPlaqueToStick(stickIdx, imgElement, borderColorHex) {
+            const size = 256;
+            const pad = 28;
+
+            const trimmedImg = getTrimmedImageCanvas(imgElement);
+
+            const rawCanvas = document.createElement('canvas');
+            rawCanvas.width = size;
+            rawCanvas.height = size;
+            const rawCtx = rawCanvas.getContext('2d');
+
+            const maxDraw = size - pad * 2;
+            const ratio = Math.min(maxDraw / trimmedImg.width, maxDraw / trimmedImg.height);
+            const drawW = trimmedImg.width * ratio;
+            const drawH = trimmedImg.height * ratio;
+            const offsetX = (size - drawW) / 2;
+            const offsetY = (size - drawH) / 2;
+
+            rawCtx.drawImage(trimmedImg, offsetX, offsetY, drawW, drawH);
+
+            const syncedPlaqueCol = getPlaqueSyncedRGB(borderColorHex);
+            const rInt = syncedPlaqueCol.r;
+            const gInt = syncedPlaqueCol.g;
+            const bInt = syncedPlaqueCol.b;
+
+            const silhouetteCanvas = document.createElement('canvas');
+            silhouetteCanvas.width = size;
+            silhouetteCanvas.height = size;
+            const silCtx = silhouetteCanvas.getContext('2d');
+            silCtx.drawImage(rawCanvas, 0, 0);
+
+            const silImgData = silCtx.getImageData(0, 0, size, size);
+            const sData = silImgData.data;
+            for (let i = 0; i < sData.length; i += 4) {
+                if (sData[i + 3] > 25) {
+                    sData[i] = rInt;
+                    sData[i + 1] = gInt;
+                    sData[i + 2] = bInt;
+                    sData[i + 3] = 255;
+                } else {
+                    sData[i + 3] = 0;
+                }
+            }
+            silCtx.putImageData(silImgData, 0, 0);
+
+            const moldCanvas = document.createElement('canvas');
+            moldCanvas.width = size;
+            moldCanvas.height = size;
+            const moldCtx = moldCanvas.getContext('2d');
+
+            const outlineThickness = 15;
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 18) {
+                moldCtx.drawImage(silhouetteCanvas, Math.cos(angle) * outlineThickness, Math.sin(angle) * outlineThickness);
+            }
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 12) {
+                moldCtx.drawImage(silhouetteCanvas, Math.cos(angle) * (outlineThickness * 0.55), Math.sin(angle) * (outlineThickness * 0.55));
+            }
+
+            const moldDataObj = moldCtx.getImageData(0, 0, size, size);
+            const mData = moldDataObj.data;
+            for (let i = 0; i < mData.length; i += 4) {
+                if (mData[i + 3] > 40) {
+                    mData[i] = rInt;
+                    mData[i + 1] = gInt;
+                    mData[i + 2] = bInt;
+                    mData[i + 3] = 255;
+                } else {
+                    mData[i + 3] = 0;
+                }
+            }
+            moldCtx.putImageData(moldDataObj, 0, 0);
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = size;
+            finalCanvas.height = size;
+            const ctx = finalCanvas.getContext('2d');
+            ctx.drawImage(moldCanvas, 0, 0);
+            ctx.drawImage(rawCanvas, 0, 0);
+
+            const frontTexture = new THREE.CanvasTexture(finalCanvas);
+            frontTexture.encoding = THREE.sRGBEncoding;
+
+            const moldOnlyTexture = new THREE.CanvasTexture(moldCanvas);
+            moldOnlyTexture.encoding = THREE.sRGBEncoding;
+
+            const stick = sticks[stickIdx];
+            while (stick.plaqueSlot.children.length > 0) {
+                stick.plaqueSlot.remove(stick.plaqueSlot.children[0]);
+            }
+
+            const plaqueGroup = new THREE.Group();
+            const baseScale = 1.44;
+            const layers = 7;
+            const totalDepth = 0.11;
+
+            const frontMat = new THREE.MeshStandardMaterial({
+                map: frontTexture,
+                transparent: true,
+                alphaTest: 0.15,
+                roughness: 0.68,
+                metalness: 0.0,
+                emissive: new THREE.Color(0xffffff),
+                emissiveMap: frontTexture,
+                emissiveIntensity: 0.22
+            });
+
+            const sideMat = new THREE.MeshStandardMaterial({
+                map: moldOnlyTexture,
+                transparent: true,
+                alphaTest: 0.15,
+                roughness: 0.68,
+                metalness: 0.0,
+                emissive: syncedPlaqueCol.threeCol,
+                emissiveIntensity: 0.22
+            });
+
+            const planeGeo = new THREE.PlaneGeometry(baseScale, baseScale);
+            for (let l = 0; l < layers; l++) {
+                const mesh = new THREE.Mesh(planeGeo, l === layers - 1 ? frontMat : sideMat);
+                mesh.position.z = (l / layers) * totalDepth;
+                mesh.userData = { stickIndex: stickIdx, isPlaque: true };
+                plaqueGroup.add(mesh);
+            }
+
+            plaqueGroup.rotation.z = stickIdx === 0 ? -0.04 : 0.04;
+            stick.plaqueSlot.add(plaqueGroup);
+            setPlaqueSlotHeight(stickIdx, state.sticksData[stickIdx].plaqueY);
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+        let draggingPlaqueStickIdx = null;
+        let dragStartPointerY = 0;
+        let dragStartPlaqueY = 0;
+
+        function getPlaqueMeshes() {
+            const meshes = [];
+            sticks.forEach(s => {
+                s.plaqueSlot.traverse(obj => {
+                    if (obj.isMesh && obj.userData.isPlaque) meshes.push(obj);
+                });
+            });
+            return meshes;
+        }
+
+        function updatePointerNDC(clientX, clientY) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        renderer.domElement.addEventListener('pointerdown', (e) => {
+            deselectAllStickers();
+
+            const plaqueMeshes = getPlaqueMeshes();
+            if (plaqueMeshes.length === 0) return;
+
+            updatePointerNDC(e.clientX, e.clientY);
+            raycaster.setFromCamera(pointerNDC, camera);
+            const intersects = raycaster.intersectObjects(plaqueMeshes, false);
+
+            if (intersects.length > 0) {
+                draggingPlaqueStickIdx = intersects[0].object.userData.stickIndex;
+                dragStartPointerY = e.clientY;
+                dragStartPlaqueY = state.sticksData[draggingPlaqueStickIdx].plaqueY;
+                renderer.domElement.style.cursor = 'ns-resize';
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (draggingPlaqueStickIdx !== null) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                const deltaY = -((e.clientY - dragStartPointerY) / rect.height) * 11.5;
+                const nextY = dragStartPlaqueY + deltaY;
+
+                if (state.syncSticks) {
+                    setPlaqueSlotHeight(0, nextY);
+                    setPlaqueSlotHeight(1, nextY);
+                } else {
+                    setPlaqueSlotHeight(draggingPlaqueStickIdx, nextY);
+                }
+                return;
+            }
+
+            const plaqueMeshes = getPlaqueMeshes();
+            if (plaqueMeshes.length > 0) {
+                updatePointerNDC(e.clientX, e.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
+                const hit = raycaster.intersectObjects(plaqueMeshes, false);
+                renderer.domElement.style.cursor = hit.length > 0 ? 'ns-resize' : 'default';
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (draggingPlaqueStickIdx !== null) {
+                draggingPlaqueStickIdx = null;
+                renderer.domElement.style.cursor = 'default';
+                saveProgressToStorage();
+            }
+        });
+
+        function createSampleDataURL(type) {
+            const c = document.createElement('canvas');
+            c.width = 200;
+            c.height = 200;
+            const ctx = c.getContext('2d');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (type === 'bear') {
+                ctx.fillStyle = '#c68642';
+                ctx.beginPath(); ctx.arc(62, 62, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(138, 62, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#e6b88a';
+                ctx.beginPath(); ctx.arc(62, 62, 12, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(138, 62, 12, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#c68642';
+                ctx.beginPath(); ctx.arc(100, 108, 52, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff5e6';
+                ctx.beginPath(); ctx.ellipse(100, 118, 22, 17, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#3b1e12';
+                ctx.beginPath(); ctx.arc(80, 96, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(120, 96, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(100, 112, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff9ebb';
+                ctx.beginPath(); ctx.arc(65, 110, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(135, 110, 9, 0, Math.PI * 2); ctx.fill();
+            } else if (type === 'clover') {
+                ctx.font = '115px sans-serif';
+                ctx.fillText('🍀', 100, 108);
+            } else if (type === 'rabbit') {
+                ctx.font = '115px sans-serif';
+                ctx.fillText('🐰', 100, 108);
+            }
+            return c.toDataURL('image/png');
+        }
+
+        const packagingGroup = new THREE.Group();
+        packagingGroup.visible = false;
+        masterGroup.add(packagingGroup);
+
+        const bagHeight = 11.4;
+        const bagGeo = new THREE.CylinderGeometry(1.90, 1.95, bagHeight, 64, 48, false);
+        const bagPos = bagGeo.attributes.position;
+        const gatherLocalY = 4.1;
+
+        for (let i = 0; i < bagPos.count; i++) {
+            let x = bagPos.getX(i);
+            let y = bagPos.getY(i);
+            let z = bagPos.getZ(i);
+            const angle = Math.atan2(z, x);
+
+            if (y < gatherLocalY - 1.1) {
+                const bottomEase = Math.max(0, (-4.8 - y) / 0.9);
+                const roundScale = 1 - bottomEase * 0.15;
+                x *= roundScale;
+                z *= 0.42 * roundScale;
+            } else if (y <= gatherLocalY) {
+                const t = (y - (gatherLocalY - 1.1)) / 1.1;
+                const smoothT = t * t * (3 - 2 * t);
+                const pinchX = 1.0 - smoothT * 0.82;
+                const pinchZ = 0.42 * (1.0 - smoothT * 0.78);
+                const pleat = Math.sin(angle * 10) * 0.06 * Math.sin(t * Math.PI);
+                x = x * pinchX + Math.cos(angle) * pleat;
+                z = z * pinchZ + Math.sin(angle) * pleat * 0.4;
+            } else {
+                const t = (y - gatherLocalY) / (bagHeight / 2 - gatherLocalY);
+                const flareX = 0.18 + t * 0.54;
+                const flareZ = 0.08 + t * 0.16;
+                const frillWave = Math.sin(angle * 12) * 0.12 * t;
+                x = x * flareX + Math.cos(angle) * frillWave;
+                z = z * flareZ + Math.sin(angle) * frillWave * 0.35;
+                y += Math.cos(angle * 8) * 0.07 * t;
+            }
+
+            bagPos.setX(i, x);
+            bagPos.setY(i, y);
+            bagPos.setZ(i, z);
+        }
+        bagGeo.computeVertexNormals();
+
+        function createBoldCellophaneTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            ctx.clearRect(0, 0, 512, 512);
+
+            const edgeCenters = [0.25, 0.75];
+            edgeCenters.forEach(uCenter => {
+                const cx = uCenter * 512;
+                const grad = ctx.createLinearGradient(cx - 72, 0, cx + 72, 0);
+                grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
+                grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.28)');
+                grad.addColorStop(0.44, 'rgba(255, 255, 255, 0.88)');
+                grad.addColorStop(0.50, 'rgba(255, 255, 255, 0.96)');
+                grad.addColorStop(0.56, 'rgba(255, 255, 255, 0.88)');
+                grad.addColorStop(0.75, 'rgba(255, 255, 255, 0.28)');
+                grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(cx - 72, 0, 144, 512);
+            });
+
+            const topGrad = ctx.createLinearGradient(0, 0, 0, 135);
+            topGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.72)');
+            topGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.45)');
+            topGrad.addColorStop(0.75, 'rgba(255, 255, 255, 0.18)');
+            topGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+            ctx.fillStyle = topGrad;
+            ctx.fillRect(0, 0, 512, 135);
+
+            const botGrad = ctx.createLinearGradient(0, 445, 0, 512);
+            botGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
+            botGrad.addColorStop(0.55, 'rgba(255, 255, 255, 0.35)');
+            botGrad.addColorStop(0.88, 'rgba(255, 255, 255, 0.78)');
+            botGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.92)');
+            ctx.fillStyle = botGrad;
+            ctx.fillRect(0, 445, 512, 67);
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(195, 130);
+            ctx.lineTo(175, 280);
+            ctx.moveTo(318, 220);
+            ctx.lineTo(335, 390);
+            ctx.stroke();
+            ctx.restore();
+
+            const tex = new THREE.CanvasTexture(c);
+            tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        }
+
+        const vinylMaterial = new THREE.MeshBasicMaterial({
+            map: createBoldCellophaneTexture(),
+            transparent: true,
+            opacity: 0.96,
+            depthWrite: false,
+            side: THREE.FrontSide
+        });
+
+        const vinylBagSubGroup = new THREE.Group();
+        packagingGroup.add(vinylBagSubGroup);
+
+        const vinylBagMesh = new THREE.Mesh(bagGeo, vinylMaterial);
+        vinylBagMesh.position.y = 0.15;
+        vinylBagSubGroup.add(vinylBagMesh);
+
+        const edgeHighlightMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.68,
+            depthWrite: false
+        });
+
+        const softSheenMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.42,
+            depthWrite: false
+        });
+
+        [-1, 1].forEach(dir => {
+            const sideEdgePts = [
+                new THREE.Vector3(dir * 1.56, -4.65, 0.15),
+                new THREE.Vector3(dir * 1.83, -2.50, 0.20),
+                new THREE.Vector3(dir * 1.81,  0.50, 0.20),
+                new THREE.Vector3(dir * 1.73,  3.05, 0.22),
+                new THREE.Vector3(dir * 0.36,  4.25, 0.24),
+                new THREE.Vector3(dir * 0.94,  5.62, 0.25)
+            ];
+            const sideCurve = new THREE.CatmullRomCurve3(sideEdgePts);
+            const sideGeo = new THREE.TubeGeometry(sideCurve, 56, 0.026, 8, false);
+            vinylBagSubGroup.add(new THREE.Mesh(sideGeo, edgeHighlightMat));
+
+            const innerSheenPts = [
+                new THREE.Vector3(dir * 1.42, -4.35, 0.22),
+                new THREE.Vector3(dir * 1.66, -1.80, 0.28),
+                new THREE.Vector3(dir * 1.64,  1.20, 0.28),
+                new THREE.Vector3(dir * 1.52,  3.00, 0.30),
+                new THREE.Vector3(dir * 0.28,  4.22, 0.26)
+            ];
+            const innerCurve = new THREE.CatmullRomCurve3(innerSheenPts);
+            const innerGeo = new THREE.TubeGeometry(innerCurve, 44, 0.014, 8, false);
+            vinylBagSubGroup.add(new THREE.Mesh(innerGeo, softSheenMat));
+        });
+
+        const bottomSeamPts = [
+            new THREE.Vector3(-1.56, -4.65, 0.15),
+            new THREE.Vector3(-0.85, -4.82, 0.22),
+            new THREE.Vector3( 0.00, -4.86, 0.25),
+            new THREE.Vector3( 0.85, -4.82, 0.22),
+            new THREE.Vector3( 1.56, -4.65, 0.15)
+        ];
+        const bottomSeamCurve = new THREE.CatmullRomCurve3(bottomSeamPts);
+        const bottomSeamGeo = new THREE.TubeGeometry(bottomSeamCurve, 36, 0.022, 8, false);
+        vinylBagSubGroup.add(new THREE.Mesh(bottomSeamGeo, edgeHighlightMat));
+
+        for (let c = -3; c <= 3; c++) {
+            const creasePts = [
+                new THREE.Vector3(c * 0.24, 3.15, 0.48),
+                new THREE.Vector3(c * 0.06, 4.25, 0.24),
+                new THREE.Vector3(c * 0.24, 5.62, 0.35)
+            ];
+            const creaseCurve = new THREE.CatmullRomCurve3(creasePts);
+            const creaseGeo = new THREE.TubeGeometry(creaseCurve, 28, 0.018, 6, false);
+            vinylBagSubGroup.add(new THREE.Mesh(creaseGeo, edgeHighlightMat));
+        }
+
+        const ribbonGroup = new THREE.Group();
+        ribbonGroup.position.set(0, 4.25, 0.52);
+        packagingGroup.add(ribbonGroup);
+
+        const ribbonMaterial = new THREE.MeshStandardMaterial({
+            color: state.ribbonColor,
+            roughness: 0.55,
+            metalness: 0.02,
+            side: THREE.DoubleSide
+        });
+
+        const neckBandGeo = new THREE.TorusGeometry(0.36, 0.065, 14, 32);
+        neckBandGeo.rotateX(Math.PI / 2);
+        neckBandGeo.scale(1.05, 1, 0.55);
+        const neckBandMesh = new THREE.Mesh(neckBandGeo, ribbonMaterial);
+        neckBandMesh.position.set(0, 0, -0.25);
+        ribbonGroup.add(neckBandMesh);
+
+        const knotGeo = new THREE.SphereGeometry(0.14, 18, 18);
+        knotGeo.scale(1.15, 0.95, 0.75);
+        const knotMesh = new THREE.Mesh(knotGeo, ribbonMaterial);
+        knotMesh.position.set(0, 0, 0.12);
+        ribbonGroup.add(knotMesh);
+
+        function createFlatRibbonPart(points, radius, zScale = 0.38) {
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geo = new THREE.TubeGeometry(curve, 64, radius, 12, false);
+            geo.scale(1, 1, zScale);
+            return new THREE.Mesh(geo, ribbonMaterial);
+        }
+
+        const leftLoopPts = [
+            new THREE.Vector3(0, 0, 0.10),
+            new THREE.Vector3(-0.50, 0.36, 0.16),
+            new THREE.Vector3(-1.22, 0.52, 0.20),
+            new THREE.Vector3(-1.52, 0.20, 0.18),
+            new THREE.Vector3(-1.12, -0.14, 0.16),
+            new THREE.Vector3(-0.45, -0.06, 0.13),
+            new THREE.Vector3(0, 0, 0.10)
+        ];
+        ribbonGroup.add(createFlatRibbonPart(leftLoopPts, 0.075));
+
+        const rightLoopPts = [
+            new THREE.Vector3(0, 0, 0.10),
+            new THREE.Vector3(0.56, 0.40, 0.16),
+            new THREE.Vector3(1.36, 0.62, 0.20),
+            new THREE.Vector3(1.68, 0.35, 0.18),
+            new THREE.Vector3(1.24, 0.06, 0.16),
+            new THREE.Vector3(0.50, 0.03, 0.13),
+            new THREE.Vector3(0, 0, 0.10)
+        ];
+        ribbonGroup.add(createFlatRibbonPart(rightLoopPts, 0.075));
+
+        const leftTailPts = [
+            new THREE.Vector3(-0.04, -0.04, 0.12),
+            new THREE.Vector3(-0.30, -0.68, 0.24),
+            new THREE.Vector3(-0.62, -1.48, 0.28),
+            new THREE.Vector3(-0.70, -2.35, 0.26),
+            new THREE.Vector3(-0.58, -3.05, 0.22)
+        ];
+        ribbonGroup.add(createFlatRibbonPart(leftTailPts, 0.082));
+
+        const rightTailPts = [
+            new THREE.Vector3(0.04, -0.04, 0.12),
+            new THREE.Vector3(0.32, -0.62, 0.24),
+            new THREE.Vector3(0.58, -1.38, 0.28),
+            new THREE.Vector3(0.64, -2.22, 0.26),
+            new THREE.Vector3(0.78, -2.95, 0.22)
+        ];
+        ribbonGroup.add(createFlatRibbonPart(rightTailPts, 0.082));
+
+        const kraftTagGroup = new THREE.Group();
+        kraftTagGroup.position.set(0.58, 3.35, 0.86);
+        kraftTagGroup.rotation.set(0.04, -0.08, -0.22);
+        kraftTagGroup.visible = false;
+        masterGroup.add(kraftTagGroup);
+
+        const stringMat = new THREE.MeshStandardMaterial({ color: 0xc29659, roughness: 0.78 });
+
+        const naturalStringPts = [
+            new THREE.Vector3(-0.53, -0.05,  0.032),
+            new THREE.Vector3(-0.58,  0.30,  0.015),
+            new THREE.Vector3(-0.74,  0.70, -0.150), 
+            new THREE.Vector3(-0.66,  0.32, -0.065),
+            new THREE.Vector3(-0.54, -0.05, -0.032),
+            new THREE.Vector3(-0.51, -0.08,  0.000), 
+            new THREE.Vector3(-0.53, -0.05,  0.032)
+        ];
+        const stringCurve = new THREE.CatmullRomCurve3(naturalStringPts);
+        const stringGeo = new THREE.TubeGeometry(stringCurve, 48, 0.015, 8, false);
+        const stringMesh = new THREE.Mesh(stringGeo, stringMat);
+        kraftTagGroup.add(stringMesh);
+
+        const stringKnotGeo = new THREE.SphereGeometry(0.025, 10, 10);
+        stringKnotGeo.scale(1.2, 0.9, 1.0);
+        const stringKnotMesh = new THREE.Mesh(stringKnotGeo, stringMat);
+        stringKnotMesh.position.set(-0.55, 0.02, 0.028);
+        kraftTagGroup.add(stringKnotMesh);
+
+        const tagCanvas = document.createElement('canvas');
+        tagCanvas.width = 512;
+        tagCanvas.height = 256;
+        const tagTexture = new THREE.CanvasTexture(tagCanvas);
+        tagTexture.encoding = THREE.sRGBEncoding;
+
+        function updateKraftTagTexture(text) {
+            const ctx = tagCanvas.getContext('2d');
+            const w = tagCanvas.width;
+            const h = tagCanvas.height;
+
+            ctx.fillStyle = '#d3a876';
+            ctx.fillRect(0, 0, w, h);
+
+            for (let i = 0; i < 3000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(95, 60, 25, 0.06)' : 'rgba(255, 235, 205, 0.06)';
+                ctx.fillRect(Math.random() * w, Math.random() * h, Math.random() * 6 + 1, 1.5);
+            }
+
+            ctx.strokeStyle = 'rgba(74, 44, 17, 0.42)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 6]);
+            ctx.strokeRect(18, 18, w - 36, h - 36);
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#8c6239';
+            ctx.beginPath(); ctx.arc(52, h / 2, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f3e4d8';
+            ctx.beginPath(); ctx.arc(52, h / 2, 10, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = 'rgba(74, 44, 17, 0.65)';
+            ctx.font = '600 18px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('HANDMADE', w / 2 + 18, 62);
+
+            const displayMsg = (text && text.trim().length > 0) ? text.trim() : 'For You';
+            ctx.fillStyle = '#2d1606';
+            const fontSize = displayMsg.length > 16 ? 52 : 62;
+            ctx.font = `${fontSize}px "Great Vibes", cursive`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(displayMsg, w / 2 + 18, h / 2 + 18);
+
+            tagTexture.needsUpdate = true;
+        }
+
+        const tagGeo = new THREE.BoxGeometry(2.05, 1.0, 0.04);
+        const tagSideMat = new THREE.MeshStandardMaterial({ color: 0xb38857, roughness: 0.85 });
+        const tagFaceMat = new THREE.MeshStandardMaterial({ map: tagTexture, roughness: 0.78 });
+        const tagMesh = new THREE.Mesh(tagGeo, [
+            tagSideMat, tagSideMat, tagSideMat, tagSideMat, tagFaceMat, tagSideMat
+        ]);
+        tagMesh.position.set(0.28, -0.05, 0);
+        kraftTagGroup.add(tagMesh);
+
+        document.fonts.ready.then(() => updateKraftTagTexture(state.tagText));
+        updateKraftTagTexture(state.tagText);
+
+        const stickerLayer = document.getElementById('sticker-layer');
+        const gizmoOverlayLayer = document.getElementById('gizmo-overlay-layer');
+        const wrapBoundGuide = document.getElementById('wrap-bound-guide');
+        const stickersList = [];
+
+        function deselectAllStickers() {
+            stickersList.forEach(s => {
+                s.el.classList.remove('active');
+                s.gizmoEl.classList.remove('active');
+            });
+            wrapBoundGuide.classList.remove('visible');
+        }
+
+        function syncPackagingVisibility() {
+            packagingGroup.visible = state.wrapped;
+            stickerLayer.style.display = state.wrapped ? 'block' : 'none';
+            gizmoOverlayLayer.style.display = state.wrapped ? 'block' : 'none';
+            if (!state.wrapped) {
+                deselectAllStickers();
+            }
+        }
+
+        function getPackagingScreenBounds() {
+            const rect = container.getBoundingClientRect();
+            const topLeft3D = new THREE.Vector3(-1.78, 4.15, 0.5).project(camera);
+            const bottomRight3D = new THREE.Vector3(1.78, -4.95, 0.5).project(camera);
+
+            const minX = ((topLeft3D.x + 1) / 2) * rect.width;
+            const maxX = ((bottomRight3D.x + 1) / 2) * rect.width;
+            const minY = ((-topLeft3D.y + 1) / 2) * rect.height;
+            const maxY = ((-bottomRight3D.y + 1) / 2) * rect.height;
+
+            wrapBoundGuide.style.left = `${minX}px`;
+            wrapBoundGuide.style.top = `${minY}px`;
+            wrapBoundGuide.style.width = `${maxX - minX}px`;
+            wrapBoundGuide.style.height = `${maxY - minY}px`;
+
+            return { minX, maxX, minY, maxY };
+        }
+
+        function clampStickerToPackaging(stickerData) {
+            const bounds = getPackagingScreenBounds();
+            const bagW = bounds.maxX - bounds.minX;
+            const bagH = bounds.maxY - bounds.minY;
+
+            const maxAllowedSize = Math.min(bagW * 0.96, bagH * 0.85, 340);
+            stickerData.size = Math.max(44, Math.min(maxAllowedSize, stickerData.size));
+
+            const halfR = Math.min(stickerData.size * 0.42, bagW * 0.48);
+            stickerData.x = Math.max(bounds.minX + halfR, Math.min(bounds.maxX - halfR, stickerData.x));
+            stickerData.y = Math.max(bounds.minY + halfR, Math.min(bounds.maxY - halfR, stickerData.y));
+        }
+
+        function buildWhiteDieCutStickerURL(imgElement, callback) {
+            const size = 280;
+            const pad = 26;
+
+            const trimmedImg = getTrimmedImageCanvas(imgElement);
+
+            const rawCanvas = document.createElement('canvas');
+            rawCanvas.width = size;
+            rawCanvas.height = size;
+            const rawCtx = rawCanvas.getContext('2d');
+
+            const maxDraw = size - pad * 2;
+            const ratio = Math.min(maxDraw / trimmedImg.width, maxDraw / trimmedImg.height);
+            const drawW = trimmedImg.width * ratio;
+            const drawH = trimmedImg.height * ratio;
+            const offsetX = (size - drawW) / 2;
+            const offsetY = (size - drawH) / 2;
+            rawCtx.drawImage(trimmedImg, offsetX, offsetY, drawW, drawH);
+
+            const whiteSil = document.createElement('canvas');
+            whiteSil.width = size;
+            whiteSil.height = size;
+            const wCtx = whiteSil.getContext('2d');
+            wCtx.drawImage(rawCanvas, 0, 0);
+            wCtx.globalCompositeOperation = 'source-in';
+            wCtx.fillStyle = '#ffffff';
+            wCtx.fillRect(0, 0, size, size);
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = size;
+            finalCanvas.height = size;
+            const ctx = finalCanvas.getContext('2d');
+
+            const borderRadius = 14;
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) {
+                ctx.drawImage(whiteSil, Math.cos(a) * borderRadius, Math.sin(a) * borderRadius);
+            }
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+                ctx.drawImage(whiteSil, Math.cos(a) * (borderRadius * 0.55), Math.sin(a) * (borderRadius * 0.55));
+            }
+
+            ctx.drawImage(rawCanvas, 0, 0);
+            callback(finalCanvas.toDataURL('image/png'), finalCanvas);
+        }
+
+        function spawnStickerOnStage(stickerDataUrl, stickerCanvasSource, restoredMeta = null) {
+            if (!state.wrapped && !restoredMeta) {
+                setWrappedState(true);
+            }
+
+            deselectAllStickers();
+
+            const stageW = container.clientWidth;
+            const stageH = container.clientHeight;
+
+            const stickerData = {
+                x: restoredMeta ? restoredMeta.rx * stageW : stageW * 0.5 + (Math.random() - 0.5) * 40,
+                y: restoredMeta ? restoredMeta.ry * stageH : stageH * 0.56 + (Math.random() - 0.5) * 55,
+                size: restoredMeta ? restoredMeta.size : 120,
+                rotation: restoredMeta ? restoredMeta.rotation : (Math.random() - 0.5) * 14,
+                dataUrl: stickerDataUrl,
+                canvasSource: stickerCanvasSource,
+                el: null,
+                gizmoEl: null
+            };
+
+            const itemEl = document.createElement('div');
+            itemEl.className = restoredMeta ? 'sticker-item' : 'sticker-item active';
+            itemEl.innerHTML = `<img src="${stickerDataUrl}" alt="sticker">`;
+
+            const gizmoEl = document.createElement('div');
+            gizmoEl.className = restoredMeta ? 'sticker-gizmo-box' : 'sticker-gizmo-box active';
+            gizmoEl.innerHTML = `
+                <div class="gizmo-scale-handle handle-tl" data-mode="scale"></div>
+                <div class="gizmo-scale-handle handle-bl" data-mode="scale"></div>
+                <div class="gizmo-scale-handle handle-br" data-mode="scale"></div>
+                <button type="button" class="gizmo-delete-btn" title="스티커 삭제">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="gizmo-rotate-line"></div>
+                <div class="gizmo-rotate-btn" data-mode="rotate" title="드래그하여 회전">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </div>
+            `;
+
+            stickerData.el = itemEl;
+            stickerData.gizmoEl = gizmoEl;
+            stickersList.push(stickerData);
+            stickerLayer.appendChild(itemEl);
+            gizmoOverlayLayer.appendChild(gizmoEl);
+
+            function renderStickerTransform() {
+                clampStickerToPackaging(stickerData);
+                const tStr = `translate(${stickerData.x - stickerData.size / 2}px, ${stickerData.y - stickerData.size / 2}px) rotate(${stickerData.rotation}deg)`;
+                itemEl.style.width = `${stickerData.size}px`;
+                itemEl.style.height = `${stickerData.size}px`;
+                itemEl.style.transform = tStr;
+
+                gizmoEl.style.width = `${stickerData.size}px`;
+                gizmoEl.style.height = `${stickerData.size}px`;
+                gizmoEl.style.transform = tStr;
+            }
+            renderStickerTransform();
+
+            if (!restoredMeta) {
+                saveProgressToStorage();
+            }
+
+            const deleteBtn = gizmoEl.querySelector('.gizmo-delete-btn');
+            deleteBtn.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                itemEl.remove();
+                gizmoEl.remove();
+                const idx = stickersList.indexOf(stickerData);
+                if (idx > -1) stickersList.splice(idx, 1);
+                wrapBoundGuide.classList.remove('visible');
+                saveProgressToStorage();
+            });
+
+            let interactionMode = null;
+            let startClientX = 0;
+            let startClientY = 0;
+            let startX = 0;
+            let startY = 0;
+            let startSize = 0;
+            let startDist = 1;
+            let startAngle = 0;
+            let startRot = 0;
+
+            function beginInteraction(e, mode) {
+                e.stopPropagation();
+                deselectAllStickers();
+                itemEl.classList.add('active');
+                gizmoEl.classList.add('active');
+                getPackagingScreenBounds();
+                wrapBoundGuide.classList.add('visible');
+
+                interactionMode = mode;
+
+                const rect = container.getBoundingClientRect();
+                const pointerX = e.clientX - rect.left;
+                const pointerY = e.clientY - rect.top;
+
+                startClientX = e.clientX;
+                startClientY = e.clientY;
+                startX = stickerData.x;
+                startY = stickerData.y;
+                startSize = stickerData.size;
+                startRot = stickerData.rotation;
+
+                const dx = pointerX - stickerData.x;
+                const dy = pointerY - stickerData.y;
+                startDist = Math.max(10, Math.hypot(dx, dy));
+                startAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+            }
+
+            itemEl.addEventListener('pointerdown', (e) => {
+                beginInteraction(e, 'move');
+                itemEl.setPointerCapture(e.pointerId);
+            });
+
+            gizmoEl.querySelectorAll('[data-mode]').forEach(handle => {
+                handle.addEventListener('pointerdown', (e) => {
+                    beginInteraction(e, handle.getAttribute('data-mode'));
+                    handle.setPointerCapture(e.pointerId);
+                });
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!interactionMode) return;
+                const rect = container.getBoundingClientRect();
+                const pointerX = e.clientX - rect.left;
+                const pointerY = e.clientY - rect.top;
+
+                if (interactionMode === 'move') {
+                    stickerData.x = startX + (e.clientX - startClientX);
+                    stickerData.y = startY + (e.clientY - startClientY);
+                } else if (interactionMode === 'scale') {
+                    const curDist = Math.hypot(pointerX - stickerData.x, pointerY - stickerData.y);
+                    stickerData.size = startSize * (curDist / startDist);
+                } else if (interactionMode === 'rotate') {
+                    const curAngle = Math.atan2(pointerY - stickerData.y, pointerX - stickerData.x) * (180 / Math.PI);
+                    stickerData.rotation = startRot + (curAngle - startAngle);
+                }
+                renderStickerTransform();
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (interactionMode) {
+                    interactionMode = null;
+                    saveProgressToStorage();
+                }
+            });
+        }
+
+        function createPresetStickerImage(type, cb) {
+            const c = document.createElement('canvas');
+            c.width = 200;
+            c.height = 200;
+            const ctx = c.getContext('2d');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (type === 'heart') {
+                ctx.fillStyle = '#ff5c8a';
+                ctx.beginPath();
+                ctx.arc(72, 82, 34, 0, Math.PI * 2);
+                ctx.arc(128, 82, 34, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(40, 94);
+                ctx.lineTo(100, 162);
+                ctx.lineTo(160, 94);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 28px "Noto Sans KR", sans-serif';
+                ctx.fillText('LOVE', 100, 102);
+            } else if (type === 'bear') {
+                ctx.font = '110px sans-serif';
+                ctx.fillText('🧸', 100, 105);
+            } else if (type === 'ribbon') {
+                ctx.font = '110px sans-serif';
+                ctx.fillText('🎀', 100, 105);
+            } else if (type === 'sparkle') {
+                ctx.fillStyle = '#ffd166';
+                ctx.font = 'bold 95px sans-serif';
+                ctx.fillText('✨', 100, 95);
+                ctx.fillStyle = '#5c3a21';
+                ctx.font = 'bold 24px "Noto Sans KR", sans-serif';
+                ctx.fillText('SWEET', 100, 148);
+            }
+
+            const img = new Image();
+            img.onload = () => buildWhiteDieCutStickerURL(img, cb);
+            img.src = c.toDataURL('image/png');
+        }
+
+        document.querySelectorAll('.preset-sticker-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                createPresetStickerImage(btn.getAttribute('data-sticker-preset'), (url, canvasSrc) => {
+                    spawnStickerOnStage(url, canvasSrc);
+                });
+            });
+        });
+
+        document.getElementById('input-sticker-img').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    buildWhiteDieCutStickerURL(img, (url, canvasSrc) => {
+                        spawnStickerOnStage(url, canvasSrc);
+                    });
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+
+        const colorModal = document.getElementById('custom-color-modal');
+        const svCanvas = document.getElementById('sv-canvas');
+        const svCtx = svCanvas.getContext('2d');
+        const svCursor = document.getElementById('sv-cursor');
+        const hueCanvas = document.getElementById('hue-canvas');
+        const hueCtx = hueCanvas.getContext('2d');
+        const hueCursor = document.getElementById('hue-cursor');
+        const pickerPreview = document.getElementById('picker-color-preview');
+        const pickerHexInput = document.getElementById('picker-hex-input');
+        const pickerTitle = document.getElementById('picker-title');
+
+        let pickerCallback = null;
+        let currentHue = 340;
+        let currentSat = 0.42;
+        let currentVal = 0.95;
+
+        function hsvToHex(h, s, v) {
+            let c = v * s;
+            let x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+            let m = v - c;
+            let r = 0, g = 0, b = 0;
+            if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+            else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+            else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+            else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+            else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+            else if (300 <= h && h <= 360) { r = c; g = 0; b = x; }
+            const toHex = n => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+        function drawHueBar() {
+            const grad = hueCtx.createLinearGradient(0, 0, hueCanvas.width, 0);
+            grad.addColorStop(0, '#ff0000');
+            grad.addColorStop(0.17, '#ffff00');
+            grad.addColorStop(0.33, '#00ff00');
+            grad.addColorStop(0.5, '#00ffff');
+            grad.addColorStop(0.67, '#0000ff');
+            grad.addColorStop(0.83, '#ff00ff');
+            grad.addColorStop(1, '#ff0000');
+            hueCtx.fillStyle = grad;
+            hueCtx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
+        }
+
+        function drawSVBox() {
+            const w = svCanvas.width;
+            const h = svCanvas.height;
+            svCtx.fillStyle = `hsl(${currentHue}, 100%, 50%)`;
+            svCtx.fillRect(0, 0, w, h);
+
+            const whiteGrad = svCtx.createLinearGradient(0, 0, w, 0);
+            whiteGrad.addColorStop(0, 'rgba(255,255,255,1)');
+            whiteGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            svCtx.fillStyle = whiteGrad;
+            svCtx.fillRect(0, 0, w, h);
+
+            const blackGrad = svCtx.createLinearGradient(0, 0, 0, h);
+            blackGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            blackGrad.addColorStop(1, 'rgba(0,0,0,1)');
+            svCtx.fillStyle = blackGrad;
+            svCtx.fillRect(0, 0, w, h);
+        }
+
+        function updatePickerUI() {
+            const hex = hsvToHex(currentHue, currentSat, currentVal);
+            pickerPreview.style.background = hex;
+            pickerHexInput.value = hex.toUpperCase();
+            svCursor.style.left = `${currentSat * 100}%`;
+            svCursor.style.top = `${(1 - currentVal) * 100}%`;
+            hueCursor.style.left = `${(currentHue / 360) * 100}%`;
+        }
+
+        drawHueBar();
+        drawSVBox();
+        updatePickerUI();
+
+        function handleSVPointer(e) {
+            const rect = svCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            currentSat = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            currentVal = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+            updatePickerUI();
+        }
+
+        function handleHuePointer(e) {
+            const rect = hueCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            currentHue = Math.max(0, Math.min(360, ((clientX - rect.left) / rect.width) * 360));
+            drawSVBox();
+            updatePickerUI();
+        }
+
+        let isDraggingSV = false;
+        let isDraggingHue = false;
+
+        svCanvas.addEventListener('mousedown', (e) => { isDraggingSV = true; handleSVPointer(e); });
+        svCanvas.addEventListener('touchstart', (e) => { isDraggingSV = true; handleSVPointer(e); e.preventDefault(); }, { passive: false });
+        hueCanvas.addEventListener('mousedown', (e) => { isDraggingHue = true; handleHuePointer(e); });
+        hueCanvas.addEventListener('touchstart', (e) => { isDraggingHue = true; handleHuePointer(e); e.preventDefault(); }, { passive: false });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingSV) handleSVPointer(e);
+            if (isDraggingHue) handleHuePointer(e);
+        });
+        window.addEventListener('touchmove', (e) => {
+            if (isDraggingSV) handleSVPointer(e);
+            if (isDraggingHue) handleHuePointer(e);
+        }, { passive: false });
+
+        window.addEventListener('mouseup', () => { isDraggingSV = false; isDraggingHue = false; });
+        window.addEventListener('touchend', () => { isDraggingSV = false; isDraggingHue = false; });
+
+        document.querySelectorAll('.quick-swatch').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const hex = btn.getAttribute('data-quick-hex');
+                pickerPreview.style.background = hex;
+                pickerHexInput.value = hex.toUpperCase();
+            });
+        });
+
+        pickerHexInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                pickerPreview.style.background = val;
+            }
+        });
+
+        function openCustomColorPicker(title, initialHex, onApply) {
+            pickerTitle.textContent = title;
+            if (initialHex && /^#[0-9A-Fa-f]{6}$/.test(initialHex)) {
+                pickerPreview.style.background = initialHex;
+                pickerHexInput.value = initialHex.toUpperCase();
+            }
+            pickerCallback = onApply;
+            colorModal.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-close-picker').addEventListener('click', () => colorModal.classList.add('hidden'));
+        document.getElementById('btn-apply-picker').addEventListener('click', () => {
+            const hex = pickerHexInput.value;
+            if (/^#[0-9A-Fa-f]{6}$/.test(hex) && pickerCallback) pickerCallback(hex);
+            colorModal.classList.add('hidden');
+        });
+
+        const syncToggle = document.getElementById('sync-toggle');
+        const syncBg = document.getElementById('sync-bg');
+        const syncDot = document.getElementById('sync-dot');
+        const stickSelector = document.getElementById('stick-selector');
+        const stickTabBtns = document.querySelectorAll('.stick-tab-btn');
+        const targetBadges = document.querySelectorAll('.target-badge');
+        const btnToggleWrap = document.getElementById('btn-toggle-wrap');
+        const btnToggleTag = document.getElementById('btn-toggle-tag');
+        const btnToggleStripe = document.getElementById('btn-toggle-stripe');
+        const inputTagText = document.getElementById('input-tag-text');
+
+        function rebuildStickVisualsFromState(idx) {
+            const sData = state.sticksData[idx];
+            sticks[idx].chocoMaterial.color.copy(getStickChocoColor(sData.chocoHex));
+            updateStickToppings(idx);
+
+            if (sData.drizzleHex === 'none') {
+                sticks[idx].drizzleMesh.visible = false;
+            } else {
+                sticks[idx].drizzleMesh.visible = true;
+                sticks[idx].drizzleMat.color.copy(getStickChocoColor(sData.drizzleHex));
+            }
+
+            setPlaqueSlotHeight(idx, sData.plaqueY);
+
+            if (sData.plaqueActive && sData.plaqueImageSrc) {
+                const img = new Image();
+                img.onload = () => applyPlaqueToStick(idx, img, sData.plaqueBorderColor);
+                img.src = sData.plaqueImageSrc;
+            } else {
+                while (sticks[idx].plaqueSlot.children.length > 0) {
+                    sticks[idx].plaqueSlot.remove(sticks[idx].plaqueSlot.children[0]);
+                }
+            }
+        }
+
+        function refreshPanelUIStates() {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            const sData = state.sticksData[refIdx];
+            const badgeText = state.syncSticks ? '(양쪽 공통)' : (state.activeStickIndex === 0 ? '(왼쪽 막대과자)' : '(오른쪽 막대과자)');
+            targetBadges.forEach(b => b.textContent = badgeText);
+
+            document.querySelectorAll('.choco-opt').forEach(btn => {
+                btn.classList.toggle('selected', btn.getAttribute('data-choco-hex').toLowerCase() === sData.chocoHex.toLowerCase());
+            });
+
+            document.querySelectorAll('.topping-opt').forEach(btn => {
+                const key = btn.getAttribute('data-topping');
+                btn.classList.toggle('border-amber-900', sData.toppings[key]);
+                btn.classList.toggle('bg-white', sData.toppings[key]);
+            });
+
+            document.querySelectorAll('.drizzle-opt').forEach(btn => {
+                btn.classList.toggle('selected', btn.getAttribute('data-drizzle-hex').toLowerCase() === sData.drizzleHex.toLowerCase());
+            });
+
+            document.querySelectorAll('.plaque-border-btn').forEach(btn => {
+                const isMatch = btn.getAttribute('data-plaque-border').toLowerCase() === sData.plaqueBorderColor.toLowerCase();
+                btn.classList.toggle('scale-110', isMatch);
+                btn.classList.toggle('border-2', isMatch);
+                btn.classList.toggle('border-amber-900', isMatch);
+            });
+        }
+
+        function saveProgressToStorage() {
+            try {
+                const stageW = container.clientWidth || 1;
+                const stageH = container.clientHeight || 1;
+                const serializedStickers = stickersList.map(st => ({
+                    rx: st.x / stageW,
+                    ry: st.y / stageH,
+                    size: st.size,
+                    rotation: st.rotation,
+                    dataUrl: st.dataUrl
+                }));
+
+                const payload = {
+                    syncSticks: state.syncSticks,
+                    activeStickIndex: state.activeStickIndex,
+                    sticksData: state.sticksData,
+                    backupIndividualSticks: state.backupIndividualSticks,
+                    wrapped: state.wrapped,
+                    ribbonColor: state.ribbonColor,
+                    tagActive: state.tagActive,
+                    tagText: state.tagText,
+                    bgColorHex: state.bgColorHex,
+                    stripeBg: state.stripeBg,
+                    stickers: serializedStickers
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            } catch (err) {
+                try {
+                    const fallbackPayload = {
+                        syncSticks: state.syncSticks,
+                        activeStickIndex: state.activeStickIndex,
+                        sticksData: state.sticksData,
+                        backupIndividualSticks: state.backupIndividualSticks,
+                        wrapped: state.wrapped,
+                        ribbonColor: state.ribbonColor,
+                        tagActive: state.tagActive,
+                        tagText: state.tagText,
+                        bgColorHex: state.bgColorHex,
+                        stripeBg: state.stripeBg,
+                        stickers: []
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackPayload));
+                } catch (_) {}
+            }
+        }
+
+        function loadProgressFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('pepero_atelier_saved_v36');
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+
+                if (typeof saved.syncSticks === 'boolean') state.syncSticks = saved.syncSticks;
+                if (typeof saved.activeStickIndex === 'number') state.activeStickIndex = saved.activeStickIndex;
+                if (Array.isArray(saved.sticksData) && saved.sticksData.length === 2) {
+                    state.sticksData = saved.sticksData;
+                }
+                if (saved.backupIndividualSticks) {
+                    state.backupIndividualSticks = saved.backupIndividualSticks;
+                }
+                if (typeof saved.wrapped === 'boolean') state.wrapped = saved.wrapped;
+                if (saved.ribbonColor) state.ribbonColor = saved.ribbonColor;
+                if (typeof saved.tagActive === 'boolean') state.tagActive = saved.tagActive;
+                if (typeof saved.tagText === 'string') state.tagText = saved.tagText;
+                if (saved.bgColorHex) state.bgColorHex = saved.bgColorHex;
+                if (typeof saved.stripeBg === 'boolean') state.stripeBg = saved.stripeBg;
+
+                syncToggle.checked = state.syncSticks;
+                if (state.syncSticks) {
+                    syncBg.classList.replace('bg-amber-950/30', 'bg-amber-900');
+                    syncDot.classList.add('translate-x-5');
+                    stickSelector.classList.add('hidden');
+                } else {
+                    syncBg.classList.replace('bg-amber-900', 'bg-amber-950/30');
+                    syncDot.classList.remove('translate-x-5');
+                    stickSelector.classList.remove('hidden');
+                }
+
+                rebuildStickVisualsFromState(0);
+                rebuildStickVisualsFromState(1);
+
+                ribbonMaterial.color.set(state.ribbonColor);
+                inputTagText.value = state.tagText;
+                updateKraftTagTexture(state.tagText);
+
+                setWrappedState(state.wrapped, false);
+                setTagActiveState(state.tagActive, false);
+
+                btnToggleStripe.textContent = state.stripeBg ? '끄기' : '켜기';
+                btnToggleStripe.classList.toggle('bg-amber-700', state.stripeBg);
+                updateBackgroundStyle(state.bgColorHex);
+
+                if (Array.isArray(saved.stickers) && saved.stickers.length > 0) {
+                    saved.stickers.forEach(stMeta => {
+                        if (!stMeta.dataUrl) return;
+                        const img = new Image();
+                        img.onload = () => {
+                            const c = document.createElement('canvas');
+                            c.width = img.width || 280;
+                            c.height = img.height || 280;
+                            c.getContext('2d').drawImage(img, 0, 0);
+                            spawnStickerOnStage(stMeta.dataUrl, c, stMeta);
+                            syncPackagingVisibility();
+                        };
+                        img.src = stMeta.dataUrl;
+                    });
+                }
+
+                refreshPanelUIStates();
+            } catch (err) {
+                console.warn('저장된 진행도를 불러오는 중 오류 발생:', err);
+            }
+        }
+
+        syncToggle.addEventListener('change', (e) => {
+            state.syncSticks = e.target.checked;
+            if (state.syncSticks) {
+                state.backupIndividualSticks = JSON.parse(JSON.stringify(state.sticksData));
+
+                syncBg.classList.replace('bg-amber-950/30', 'bg-amber-900');
+                syncDot.classList.add('translate-x-5');
+                stickSelector.classList.add('hidden');
+
+                const srcIdx = state.activeStickIndex;
+                const dstIdx = srcIdx === 0 ? 1 : 0;
+                state.sticksData[dstIdx] = JSON.parse(JSON.stringify(state.sticksData[srcIdx]));
+                rebuildStickVisualsFromState(dstIdx);
+            } else {
+                syncBg.classList.replace('bg-amber-900', 'bg-amber-950/30');
+                syncDot.classList.remove('translate-x-5');
+                stickSelector.classList.remove('hidden');
+
+                if (state.backupIndividualSticks && state.backupIndividualSticks.length === 2) {
+                    state.sticksData = JSON.parse(JSON.stringify(state.backupIndividualSticks));
+                    rebuildStickVisualsFromState(0);
+                    rebuildStickVisualsFromState(1);
+                    showToastMessage('각각 꾸며두었던 디자인을 복원했어요!');
+                }
+            }
+            refreshPanelUIStates();
+            saveProgressToStorage();
+        });
+
+        function updateBackupIfIndividual() {
+            if (!state.syncSticks) {
+                state.backupIndividualSticks = JSON.parse(JSON.stringify(state.sticksData));
+            }
+        }
+
+        stickTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.activeStickIndex = parseInt(btn.getAttribute('data-stick'), 10);
+                stickTabBtns.forEach(b => {
+                    const isSelected = parseInt(b.getAttribute('data-stick'), 10) === state.activeStickIndex;
+                    b.className = isSelected
+                        ? 'stick-tab-btn px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-900 text-white shadow-sm transition'
+                        : 'stick-tab-btn px-2.5 py-1 rounded-full text-[11px] font-bold text-amber-900 hover:text-amber-950 transition';
+                });
+                refreshPanelUIStates();
+                saveProgressToStorage();
+            });
+        });
+
+        const toolButtons = document.querySelectorAll('[data-panel]');
+        const configPanels = document.querySelectorAll('.config-panel');
+
+        function openPanel(panelId) {
+            configPanels.forEach(p => {
+                if (p.id === panelId) p.classList.toggle('hidden');
+                else p.classList.add('hidden');
+            });
+            toolButtons.forEach(btn => {
+                const target = btn.getAttribute('data-panel');
+                const panelEl = document.getElementById(target);
+                btn.classList.toggle('active', target === panelId && !panelEl.classList.contains('hidden'));
+            });
+        }
+
+        toolButtons.forEach(btn => btn.addEventListener('click', () => openPanel(btn.getAttribute('data-panel'))));
+        document.querySelectorAll('.close-panel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                configPanels.forEach(p => p.classList.add('hidden'));
+                toolButtons.forEach(b => b.classList.remove('active'));
+            });
+        });
+
+        function setBaseChocoColor(hex) {
+            const livelyCol = getStickChocoColor(hex);
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].chocoHex = hex;
+                sticks[idx].chocoMaterial.color.copy(livelyCol);
+            });
+            updateBackupIfIndividual();
+            refreshPanelUIStates();
+            saveProgressToStorage();
+        }
+        document.querySelectorAll('.choco-opt').forEach(btn => {
+            btn.addEventListener('click', () => setBaseChocoColor(btn.getAttribute('data-choco-hex')));
+        });
+        document.getElementById('btn-palette-choco').addEventListener('click', () => {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            openCustomColorPicker('초콜릿 색상 지정', state.sticksData[refIdx].chocoHex, setBaseChocoColor);
+        });
+
+        document.querySelectorAll('.topping-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-topping');
+                const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+                const nextVal = !state.sticksData[refIdx].toppings[key];
+                getTargetStickIndices().forEach(idx => {
+                    state.sticksData[idx].toppings[key] = nextVal;
+                    updateStickToppings(idx);
+                });
+                updateBackupIfIndividual();
+                refreshPanelUIStates();
+                saveProgressToStorage();
+            });
+        });
+
+        function setDrizzleColor(hexOrNone) {
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].drizzleHex = hexOrNone;
+                if (hexOrNone === 'none') {
+                    sticks[idx].drizzleMesh.visible = false;
+                } else {
+                    sticks[idx].drizzleMesh.visible = true;
+                    sticks[idx].drizzleMat.color.copy(getStickChocoColor(hexOrNone));
+                }
+            });
+            updateBackupIfIndividual();
+            refreshPanelUIStates();
+            saveProgressToStorage();
+        }
+        document.querySelectorAll('.drizzle-opt').forEach(btn => {
+            btn.addEventListener('click', () => setDrizzleColor(btn.getAttribute('data-drizzle-hex')));
+        });
+        document.getElementById('btn-palette-drizzle').addEventListener('click', () => {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            const cur = state.sticksData[refIdx].drizzleHex;
+            openCustomColorPicker('드리즐 색상 지정', cur === 'none' ? '#f48fb1' : cur, setDrizzleColor);
+        });
+
+        function applyPlaqueToTargets(dataUrl) {
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].plaqueImageSrc = dataUrl;
+                state.sticksData[idx].plaqueActive = true;
+                const img = new Image();
+                img.onload = () => applyPlaqueToStick(idx, img, state.sticksData[idx].plaqueBorderColor);
+                img.src = dataUrl;
+            });
+            updateBackupIfIndividual();
+            saveProgressToStorage();
+        }
+        document.getElementById('input-plaque-img').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => applyPlaqueToTargets(ev.target.result);
+            reader.readAsDataURL(file);
+        });
+        document.querySelectorAll('.preset-plaque-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPlaqueToTargets(createSampleDataURL(btn.getAttribute('data-preset'))));
+        });
+        function setPlaqueBorderColor(hex) {
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].plaqueBorderColor = hex;
+                if (state.sticksData[idx].plaqueActive && state.sticksData[idx].plaqueImageSrc) {
+                    const img = new Image();
+                    img.onload = () => applyPlaqueToStick(idx, img, hex);
+                    img.src = state.sticksData[idx].plaqueImageSrc;
+                }
+            });
+            updateBackupIfIndividual();
+            refreshPanelUIStates();
+            saveProgressToStorage();
+        }
+        document.querySelectorAll('.plaque-border-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setPlaqueBorderColor(btn.getAttribute('data-plaque-border'));
+            });
+        });
+        document.getElementById('btn-palette-plaque').addEventListener('click', () => {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            openCustomColorPicker('판초콜릿 몰드 색상 지정', state.sticksData[refIdx].plaqueBorderColor, setPlaqueBorderColor);
+        });
+        document.getElementById('btn-remove-plaque').addEventListener('click', () => {
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].plaqueActive = false;
+                while (sticks[idx].plaqueSlot.children.length > 0) {
+                    sticks[idx].plaqueSlot.remove(sticks[idx].plaqueSlot.children[0]);
+                }
+            });
+            updateBackupIfIndividual();
+            saveProgressToStorage();
+        });
+
+        function setWrappedState(nextWrapped, shouldSave = true) {
+            state.wrapped = nextWrapped;
+            btnToggleWrap.textContent = state.wrapped ? '포장 해제' : '포장하기';
+            btnToggleWrap.classList.toggle('bg-amber-700', state.wrapped);
+            syncPackagingVisibility();
+            if (shouldSave) saveProgressToStorage();
+        }
+
+        btnToggleWrap.addEventListener('click', () => {
+            setWrappedState(!state.wrapped);
+        });
+
+        function setRibbonColor(hex) {
+            state.ribbonColor = hex;
+            ribbonMaterial.color.set(hex);
+            if (!state.wrapped) setWrappedState(true, false);
+            saveProgressToStorage();
+        }
+        document.querySelectorAll('.ribbon-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.ribbon-color-btn').forEach(b => b.classList.remove('scale-110', 'border-2', 'border-amber-950'));
+                btn.classList.add('scale-110', 'border-2', 'border-amber-950');
+                setRibbonColor(btn.getAttribute('data-ribbon'));
+            });
+        });
+        document.getElementById('btn-palette-ribbon').addEventListener('click', () => {
+            openCustomColorPicker('리본 색상 지정', state.ribbonColor, setRibbonColor);
+        });
+
+        function setTagActiveState(nextTagActive, shouldSave = true) {
+            state.tagActive = nextTagActive;
+            if (state.tagActive && !state.wrapped) {
+                setWrappedState(true, false);
+            }
+            btnToggleTag.textContent = state.tagActive ? '태그 제거' : '태그 부착';
+            btnToggleTag.classList.toggle('bg-amber-700', state.tagActive);
+            if (shouldSave) saveProgressToStorage();
+        }
+
+        btnToggleTag.addEventListener('click', () => {
+            setTagActiveState(!state.tagActive);
+        });
+
+        inputTagText.addEventListener('input', (e) => {
+            state.tagText = e.target.value;
+            updateKraftTagTexture(state.tagText);
+            if (!state.tagActive) setTagActiveState(true, false);
+            saveProgressToStorage();
+        });
+        document.querySelectorAll('.quick-msg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const msg = btn.getAttribute('data-msg');
+                inputTagText.value = msg;
+                state.tagText = msg;
+                updateKraftTagTexture(msg);
+                if (!state.tagActive) setTagActiveState(true, false);
+                saveProgressToStorage();
+            });
+        });
+
+        btnToggleStripe.addEventListener('click', () => {
+            state.stripeBg = !state.stripeBg;
+            btnToggleStripe.textContent = state.stripeBg ? '끄기' : '켜기';
+            btnToggleStripe.classList.toggle('bg-amber-700', state.stripeBg);
+            renderStageBackgroundPattern();
+            saveProgressToStorage();
+        });
+
+        document.querySelectorAll('.bg-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.bg-opt').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                updateBackgroundStyle(btn.getAttribute('data-bg-hex'));
+                saveProgressToStorage();
+            });
+        });
+        document.getElementById('btn-palette-bg').addEventListener('click', () => {
+            openCustomColorPicker('배경색 지정', state.bgColorHex, (hex) => {
+                document.querySelectorAll('.bg-opt').forEach(b => b.classList.remove('selected'));
+                updateBackgroundStyle(hex);
+                saveProgressToStorage();
+            });
+        });
+
+        const creditPreview = document.getElementById('credit-preview');
+        const inputCreditText = document.getElementById('input-credit-text');
+        const btnToggleCreditInvert = document.getElementById('btn-toggle-credit-invert');
+        const creditColorLabel = document.getElementById('credit-color-label');
+
+        function updateCreditUI() {
+            const trimmed = (state.creditText || '').trim();
+            if (trimmed.length > 0) {
+                creditPreview.textContent = trimmed;
+                creditPreview.classList.remove('hidden');
+            } else {
+                creditPreview.textContent = '';
+                creditPreview.classList.add('hidden');
+            }
+            creditPreview.style.color = state.creditInverted ? '#111111' : '#ffffff';
+            creditColorLabel.textContent = state.creditInverted ? '(현재: 검정)' : '(현재: 흰색)';
+            btnToggleCreditInvert.textContent = state.creditInverted ? '흰색 글씨로 변경' : '검정 글씨로 변경';
+            btnToggleCreditInvert.classList.toggle('bg-amber-700', state.creditInverted);
+        }
+
+        inputCreditText.addEventListener('input', (e) => {
+            state.creditText = e.target.value;
+            updateCreditUI();
+            saveProgressToStorage();
+        });
+
+        btnToggleCreditInvert.addEventListener('click', () => {
+            state.creditInverted = !state.creditInverted;
+            updateCreditUI();
+            saveProgressToStorage();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('pepero_atelier_saved_v36');
+            stickersList.forEach(st => {
+                st.el.remove();
+                st.gizmoEl.remove();
+            });
+            stickersList.length = 0;
+
+            state.syncSticks = true;
+            state.activeStickIndex = 0;
+            state.sticksData = [createDefaultStickState(), createDefaultStickState()];
+            state.backupIndividualSticks = null;
+            state.ribbonColor = '#7eb6ff';
+            state.tagText = 'For You, Sweetheart';
+            state.bgColorHex = '#f3e4d8';
+            state.stripeBg = false;
+
+            syncToggle.checked = true;
+            syncBg.classList.replace('bg-amber-950/30', 'bg-amber-900');
+            syncDot.classList.add('translate-x-5');
+            stickSelector.classList.add('hidden');
+
+            rebuildStickVisualsFromState(0);
+            rebuildStickVisualsFromState(1);
+
+            ribbonMaterial.color.set(state.ribbonColor);
+            inputTagText.value = state.tagText;
+            updateKraftTagTexture(state.tagText);
+
+            setTagActiveState(false, false);
+            setWrappedState(false, false);
+
+            btnToggleStripe.textContent = '켜기';
+            btnToggleStripe.classList.remove('bg-amber-700');
+            updateBackgroundStyle('#f3e4d8');
+            refreshPanelUIStates();
+            showToastMessage('처음 상태로 초기화했습니다!');
+        });
+
+        function adjustResponsiveSize() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const aspect = w / h;
+            camera.aspect = aspect;
+
+            const requiredHeight = 14.6;
+            const requiredWidth = w < 520 ? 8.0 : 6.8;
+
+            const fovRad = THREE.MathUtils.degToRad(camera.fov);
+            const distForHeight = (requiredHeight / 2) / Math.tan(fovRad / 2);
+            const distForWidth = (requiredWidth / 2) / (Math.tan(fovRad / 2) * aspect);
+
+            const finalDist = Math.max(distForHeight, distForWidth, 14.5);
+
+            camera.position.set(0, 0.25, finalDist);
+            camera.lookAt(0, 0.25, 0);
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            frontOverlayCanvas.width = w * dpr;
+            frontOverlayCanvas.height = h * dpr;
+
+            renderStageBackgroundPattern();
+            stickersList.forEach(st => {
+                clampStickerToPackaging(st);
+                const tStr = `translate(${st.x - st.size / 2}px, ${st.y - st.size / 2}px) rotate(${st.rotation}deg)`;
+                st.el.style.transform = tStr;
+                st.gizmoEl.style.transform = tStr;
+            });
+        }
+
+        window.addEventListener('resize', adjustResponsiveSize);
+
+        function renderMultiLayerScene() {
+            const w = frontOverlayCanvas.width;
+            const h = frontOverlayCanvas.height;
+            frontOverlayCtx.clearRect(0, 0, w, h);
+
+            if (state.wrapped) {
+                sticks[0].group.visible = false;
+                sticks[1].group.visible = false;
+                vinylBagSubGroup.visible = false;
+                ribbonGroup.visible = true;
+                kraftTagGroup.visible = state.tagActive;
+
+                renderer.render(scene, camera);
+                frontOverlayCtx.drawImage(renderer.domElement, 0, 0, w, h);
+            }
+
+            sticks[0].group.visible = true;
+            sticks[1].group.visible = true;
+            vinylBagSubGroup.visible = state.wrapped;
+            ribbonGroup.visible = false;
+            kraftTagGroup.visible = false;
+
+            renderer.render(scene, camera);
+        }
+
+        document.getElementById('btn-download').addEventListener('click', () => {
+            deselectAllStickers();
+
+            const stageW = container.clientWidth;
+            const stageH = container.clientHeight;
+
+            const exportW = 1200;
+            const exportH = 1600;
+            const targetAspect = exportW / exportH;
+
+            let cropW, cropH, cropX, cropY;
+            if (stageW / stageH > targetAspect) {
+                cropH = stageH;
+                cropW = stageH * targetAspect;
+                cropX = (stageW - cropW) / 2;
+                cropY = 0;
+            } else {
+                cropW = stageW;
+                cropH = stageW / targetAspect;
+                cropX = 0;
+                cropY = (stageH - cropH) / 2;
+            }
+
+            const originalPixelRatio = renderer.getPixelRatio();
+            const renderScale = 3;
+            renderer.setPixelRatio(renderScale);
+            renderer.setSize(stageW, stageH);
+
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = exportW;
+            exportCanvas.height = exportH;
+            const eCtx = exportCanvas.getContext('2d');
+
+            const baseCol = new THREE.Color(state.bgColorHex);
+            const lightCol = baseCol.clone().lerp(new THREE.Color('#ffffff'), 0.45);
+            const darkCol = baseCol.clone().lerp(new THREE.Color('#3b2314'), 0.12);
+
+            const grad = eCtx.createRadialGradient(
+                exportW * 0.5, exportH * 0.45, 50,
+                exportW * 0.5, exportH * 0.5, exportH * 0.72
+            );
+            grad.addColorStop(0, `#${lightCol.getHexString()}`);
+            grad.addColorStop(0.65, `#${baseCol.getHexString()}`);
+            grad.addColorStop(1, `#${darkCol.getHexString()}`);
+            eCtx.fillStyle = grad;
+            eCtx.fillRect(0, 0, exportW, exportH);
+
+            if (state.stripeBg) {
+                drawDiagonalStripesOnContext(eCtx, exportW, exportH, state.bgColorHex, exportW);
+            }
+
+            sticks[0].group.visible = true;
+            sticks[1].group.visible = true;
+            vinylBagSubGroup.visible = state.wrapped;
+            ribbonGroup.visible = false;
+            kraftTagGroup.visible = false;
+            renderer.render(scene, camera);
+
+            eCtx.drawImage(
+                renderer.domElement,
+                cropX * renderScale, cropY * renderScale, cropW * renderScale, cropH * renderScale,
+                0, 0, exportW, exportH
+            );
+
+            if (state.wrapped) {
+                const scaleFactor = exportW / cropW;
+                stickersList.forEach(st => {
+                    eCtx.save();
+                    const tx = (st.x - cropX) * scaleFactor;
+                    const ty = (st.y - cropY) * scaleFactor;
+                    const drawSize = st.size * scaleFactor;
+                    eCtx.translate(tx, ty);
+                    eCtx.rotate((st.rotation * Math.PI) / 180);
+                    eCtx.drawImage(st.canvasSource, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+                    eCtx.restore();
+                });
+
+                sticks[0].group.visible = false;
+                sticks[1].group.visible = false;
+                vinylBagSubGroup.visible = false;
+                ribbonGroup.visible = true;
+                kraftTagGroup.visible = state.tagActive;
+                renderer.render(scene, camera);
+
+                eCtx.drawImage(
+                    renderer.domElement,
+                    cropX * renderScale, cropY * renderScale, cropW * renderScale, cropH * renderScale,
+                    0, 0, exportW, exportH
+                );
+            }
+
+            const creditStr = (state.creditText || '').trim();
+            if (creditStr.length > 0) {
+                eCtx.save();
+                eCtx.font = '500 24px "Noto Sans KR", sans-serif';
+                eCtx.fillStyle = state.creditInverted ? '#111111' : '#ffffff';
+                eCtx.textAlign = 'left';
+                eCtx.textBaseline = 'bottom';
+                eCtx.globalAlpha = 0.88; 
+                eCtx.fillText(creditStr, 42, exportH - 38);
+                eCtx.restore();
+            }
+
+            renderer.setPixelRatio(originalPixelRatio);
+            renderer.setSize(stageW, stageH);
+            renderMultiLayerScene();
+
+            const dataURL = exportCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `막대과자.png`;
+            link.href = dataURL;
+            link.click();
+
+            showToastMessage('이미지를 저장했습니다!');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderMultiLayerScene();
+        }
+
+        window.onload = function () {
+            adjustResponsiveSize();
+            loadProgressFromStorage();
+            animate();
+        };
+    </script>
+</body>
+</html>
