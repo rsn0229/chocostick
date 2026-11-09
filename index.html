@@ -16,6 +16,12 @@
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        input, textarea {
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: manipulation;
         }
         body, html {
             margin: 0;
@@ -23,6 +29,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            overscroll-behavior: none;
+            touch-action: none;
             font-family: 'Noto Sans KR', sans-serif;
             background: radial-gradient(circle at 50% 45%, #fff9f5 0%, #f3e4d8 65%, #e4cebc 100%);
             transition: background 0.3s ease;
@@ -45,6 +53,7 @@
             overflow: hidden;
             background: transparent;
             z-index: 1;
+            touch-action: none;
         }
 
         #canvas-container {
@@ -54,12 +63,14 @@
             top: 0;
             left: 0;
             z-index: 1;
+            touch-action: none;
         }
         #canvas-container canvas {
             display: block;
             width: 100%;
             height: 100%;
             outline: none;
+            touch-action: none;
         }
 
         #sticker-layer {
@@ -134,17 +145,18 @@
         }
         .gizmo-scale-handle {
             position: absolute;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             background: #ffffff;
             border: 2.5px solid #5c3a21;
-            border-radius: 4px;
+            border-radius: 5px;
             pointer-events: auto;
+            touch-action: none;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .handle-tl { top: -8px; left: -8px; cursor: nwse-resize; }
-        .handle-bl { bottom: -8px; left: -8px; cursor: nesw-resize; }
-        .handle-br { bottom: -8px; right: -8px; cursor: nwse-resize; }
+        .handle-tl { top: -10px; left: -10px; cursor: nwse-resize; }
+        .handle-bl { bottom: -10px; left: -10px; cursor: nesw-resize; }
+        .handle-br { bottom: -10px; right: -10px; cursor: nwse-resize; }
 
         .gizmo-delete-btn {
             position: absolute;
@@ -162,6 +174,7 @@
             font-size: 12px;
             cursor: pointer;
             pointer-events: auto;
+            touch-action: none;
             box-shadow: 0 3px 8px rgba(0,0,0,0.28);
             transition: transform 0.15s ease;
         }
@@ -180,11 +193,11 @@
         }
         .gizmo-rotate-btn {
             position: absolute;
-            bottom: -40px;
+            bottom: -42px;
             left: 50%;
             transform: translateX(-50%);
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 9999px;
             background: #ffffff;
             color: #5c3a21;
@@ -195,6 +208,7 @@
             font-size: 12px;
             cursor: grab;
             pointer-events: auto;
+            touch-action: none;
             box-shadow: 0 3px 8px rgba(0,0,0,0.22);
         }
         .gizmo-rotate-btn:active {
@@ -212,6 +226,7 @@
         }
         .tool-btn {
             transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+            touch-action: manipulation;
         }
         .tool-btn:hover {
             transform: scale(1.06);
@@ -227,6 +242,7 @@
         }
         .swatch-btn {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            touch-action: manipulation;
         }
         .swatch-btn.selected {
             transform: scale(1.12);
@@ -334,7 +350,7 @@
                 <span class="text-[10px] font-bold mt-0.5">태그</span>
             </button>
 
-<button data-panel="panel-bg" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
+            <button data-panel="panel-bg" class="tool-btn glass-panel w-12 h-12 md:w-13 md:h-13 rounded-full flex flex-col items-center justify-center text-amber-950">
                 <span class="text-base"><i class="fa-solid fa-fill-drip"></i></span>
                 <span class="text-[10px] font-bold mt-0.5">배경</span>
             </button>
@@ -623,12 +639,12 @@
             </div>
 
             <div class="relative w-full h-40 rounded-2xl overflow-hidden mb-3 border border-amber-900/15 shadow-inner touch-none">
-                <canvas id="sv-canvas" width="260" height="160" class="w-full h-full cursor-crosshair"></canvas>
+                <canvas id="sv-canvas" width="260" height="160" class="w-full h-full cursor-crosshair touch-none"></canvas>
                 <div id="sv-cursor" class="pointer-events-none absolute w-4 h-4 rounded-full border-2 border-white shadow-md -translate-x-1/2 -translate-y-1/2" style="top: 30%; left: 70%; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4);"></div>
             </div>
 
             <div class="relative w-full h-5 rounded-full overflow-hidden mb-3 border border-amber-900/15 shadow-inner touch-none">
-                <canvas id="hue-canvas" width="260" height="20" class="w-full h-full cursor-pointer"></canvas>
+                <canvas id="hue-canvas" width="260" height="20" class="w-full h-full cursor-pointer touch-none"></canvas>
                 <div id="hue-cursor" class="pointer-events-none absolute top-0 bottom-0 w-2.5 bg-white rounded-full border border-black/40 -translate-x-1/2" style="left: 50%;"></div>
             </div>
 
@@ -1487,6 +1503,7 @@
         const raycaster = new THREE.Raycaster();
         const pointerNDC = new THREE.Vector2();
         let draggingPlaqueStickIdx = null;
+        let activePlaquePointerId = null;
         let dragStartPointerY = 0;
         let dragStartPlaqueY = 0;
 
@@ -1506,6 +1523,22 @@
             pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
         }
 
+        function stopPlaqueDragging(shouldSave = true) {
+            if (draggingPlaqueStickIdx !== null) {
+                if (activePlaquePointerId !== null) {
+                    try {
+                        if (renderer.domElement.hasPointerCapture(activePlaquePointerId)) {
+                            renderer.domElement.releasePointerCapture(activePlaquePointerId);
+                        }
+                    } catch (_) {}
+                }
+                draggingPlaqueStickIdx = null;
+                activePlaquePointerId = null;
+                renderer.domElement.style.cursor = 'default';
+                if (shouldSave) saveProgressToStorage();
+            }
+        }
+
         renderer.domElement.addEventListener('pointerdown', (e) => {
             deselectAllStickers();
 
@@ -1518,15 +1551,22 @@
 
             if (intersects.length > 0) {
                 draggingPlaqueStickIdx = intersects[0].object.userData.stickIndex;
+                activePlaquePointerId = e.pointerId;
                 dragStartPointerY = e.clientY;
                 dragStartPlaqueY = state.sticksData[draggingPlaqueStickIdx].plaqueY;
                 renderer.domElement.style.cursor = 'ns-resize';
+                try {
+                    renderer.domElement.setPointerCapture(e.pointerId);
+                } catch (_) {}
                 e.preventDefault();
             }
         });
 
         window.addEventListener('pointermove', (e) => {
             if (draggingPlaqueStickIdx !== null) {
+                if (activePlaquePointerId !== null && e.pointerId !== activePlaquePointerId) return;
+                if (e.cancelable) e.preventDefault();
+
                 const rect = renderer.domElement.getBoundingClientRect();
                 const deltaY = -((e.clientY - dragStartPointerY) / rect.height) * 11.5;
                 const nextY = dragStartPlaqueY + deltaY;
@@ -1540,20 +1580,26 @@
                 return;
             }
 
-            const plaqueMeshes = getPlaqueMeshes();
-            if (plaqueMeshes.length > 0) {
-                updatePointerNDC(e.clientX, e.clientY);
-                raycaster.setFromCamera(pointerNDC, camera);
-                const hit = raycaster.intersectObjects(plaqueMeshes, false);
-                renderer.domElement.style.cursor = hit.length > 0 ? 'ns-resize' : 'default';
+            if (e.pointerType === 'mouse') {
+                const plaqueMeshes = getPlaqueMeshes();
+                if (plaqueMeshes.length > 0) {
+                    updatePointerNDC(e.clientX, e.clientY);
+                    raycaster.setFromCamera(pointerNDC, camera);
+                    const hit = raycaster.intersectObjects(plaqueMeshes, false);
+                    renderer.domElement.style.cursor = hit.length > 0 ? 'ns-resize' : 'default';
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('pointerup', (e) => {
+            if (activePlaquePointerId === null || e.pointerId === activePlaquePointerId) {
+                stopPlaqueDragging(true);
             }
         });
 
-        window.addEventListener('pointerup', () => {
-            if (draggingPlaqueStickIdx !== null) {
-                draggingPlaqueStickIdx = null;
-                renderer.domElement.style.cursor = 'default';
-                saveProgressToStorage();
+        window.addEventListener('pointercancel', (e) => {
+            if (activePlaquePointerId === null || e.pointerId === activePlaquePointerId) {
+                stopPlaqueDragging(true);
             }
         });
 
@@ -1931,8 +1977,16 @@
         const wrapBoundGuide = document.getElementById('wrap-bound-guide');
         const stickersList = [];
 
+        function cancelAllActiveDrags() {
+            stopPlaqueDragging(false);
+            stickersList.forEach(s => {
+                if (typeof s.stopDrag === 'function') s.stopDrag(false);
+            });
+        }
+
         function deselectAllStickers() {
             stickersList.forEach(s => {
+                if (typeof s.stopDrag === 'function') s.stopDrag(false);
                 s.el.classList.remove('active');
                 s.gizmoEl.classList.remove('active');
             });
@@ -1949,6 +2003,7 @@
         }
 
         function getPackagingScreenBounds() {
+            camera.updateMatrixWorld();
             const rect = container.getBoundingClientRect();
             const topLeft3D = new THREE.Vector3(-1.78, 4.15, 0.5).project(camera);
             const bottomRight3D = new THREE.Vector3(1.78, -4.95, 0.5).project(camera);
@@ -1970,6 +2025,8 @@
             const bounds = getPackagingScreenBounds();
             const bagW = bounds.maxX - bounds.minX;
             const bagH = bounds.maxY - bounds.minY;
+
+            if (bagW <= 10 || bagH <= 10) return;
 
             const maxAllowedSize = Math.min(bagW * 0.96, bagH * 0.85, 340);
             stickerData.size = Math.max(44, Math.min(maxAllowedSize, stickerData.size));
@@ -2042,7 +2099,8 @@
                 dataUrl: stickerDataUrl,
                 canvasSource: stickerCanvasSource,
                 el: null,
-                gizmoEl: null
+                gizmoEl: null,
+                stopDrag: null
             };
 
             const itemEl = document.createElement('div');
@@ -2087,18 +2145,9 @@
                 saveProgressToStorage();
             }
 
-            const deleteBtn = gizmoEl.querySelector('.gizmo-delete-btn');
-            deleteBtn.addEventListener('pointerdown', (e) => {
-                e.stopPropagation();
-                itemEl.remove();
-                gizmoEl.remove();
-                const idx = stickersList.indexOf(stickerData);
-                if (idx > -1) stickersList.splice(idx, 1);
-                wrapBoundGuide.classList.remove('visible');
-                saveProgressToStorage();
-            });
-
             let interactionMode = null;
+            let activePointerId = null;
+            let capturedEl = null;
             let startClientX = 0;
             let startClientY = 0;
             let startX = 0;
@@ -2108,15 +2157,88 @@
             let startAngle = 0;
             let startRot = 0;
 
-            function beginInteraction(e, mode) {
+            function finishInteraction(shouldSave = true) {
+                if (!interactionMode) return;
+                if (capturedEl && activePointerId !== null) {
+                    try {
+                        if (capturedEl.hasPointerCapture(activePointerId)) {
+                            capturedEl.releasePointerCapture(activePointerId);
+                        }
+                    } catch (_) {}
+                }
+                interactionMode = null;
+                activePointerId = null;
+                capturedEl = null;
+                if (shouldSave) saveProgressToStorage();
+            }
+
+            stickerData.stopDrag = finishInteraction;
+
+            function onPointerMove(e) {
+                if (!interactionMode || e.pointerId !== activePointerId) return;
+                if (e.cancelable) e.preventDefault();
+
+                const rect = container.getBoundingClientRect();
+                const pointerX = e.clientX - rect.left;
+                const pointerY = e.clientY - rect.top;
+
+                if (interactionMode === 'move') {
+                    stickerData.x = startX + (e.clientX - startClientX);
+                    stickerData.y = startY + (e.clientY - startClientY);
+                } else if (interactionMode === 'scale') {
+                    const curDist = Math.hypot(pointerX - stickerData.x, pointerY - stickerData.y);
+                    stickerData.size = startSize * (curDist / startDist);
+                } else if (interactionMode === 'rotate') {
+                    const curAngle = Math.atan2(pointerY - stickerData.y, pointerX - stickerData.x) * (180 / Math.PI);
+                    stickerData.rotation = startRot + (curAngle - startAngle);
+                }
+                renderStickerTransform();
+            }
+
+            function onPointerUpOrCancel(e) {
+                if (interactionMode && e.pointerId === activePointerId) {
+                    finishInteraction(true);
+                }
+            }
+
+            window.addEventListener('pointermove', onPointerMove, { passive: false });
+            window.addEventListener('pointerup', onPointerUpOrCancel);
+            window.addEventListener('pointercancel', onPointerUpOrCancel);
+
+            const deleteBtn = gizmoEl.querySelector('.gizmo-delete-btn');
+            deleteBtn.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                finishInteraction(false);
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUpOrCancel);
+                window.removeEventListener('pointercancel', onPointerUpOrCancel);
+                itemEl.remove();
+                gizmoEl.remove();
+                const idx = stickersList.indexOf(stickerData);
+                if (idx > -1) stickersList.splice(idx, 1);
+                wrapBoundGuide.classList.remove('visible');
+                saveProgressToStorage();
+            });
+
+            function beginInteraction(e, mode, targetElement) {
+                e.stopPropagation();
+                e.preventDefault();
+                cancelAllActiveDrags();
                 deselectAllStickers();
+
                 itemEl.classList.add('active');
                 gizmoEl.classList.add('active');
                 getPackagingScreenBounds();
                 wrapBoundGuide.classList.add('visible');
 
                 interactionMode = mode;
+                activePointerId = e.pointerId;
+                capturedEl = targetElement;
+
+                try {
+                    targetElement.setPointerCapture(e.pointerId);
+                } catch (_) {}
 
                 const rect = container.getBoundingClientRect();
                 const pointerX = e.clientX - rect.left;
@@ -2136,41 +2258,13 @@
             }
 
             itemEl.addEventListener('pointerdown', (e) => {
-                beginInteraction(e, 'move');
-                itemEl.setPointerCapture(e.pointerId);
+                beginInteraction(e, 'move', itemEl);
             });
 
             gizmoEl.querySelectorAll('[data-mode]').forEach(handle => {
                 handle.addEventListener('pointerdown', (e) => {
-                    beginInteraction(e, handle.getAttribute('data-mode'));
-                    handle.setPointerCapture(e.pointerId);
+                    beginInteraction(e, handle.getAttribute('data-mode'), handle);
                 });
-            });
-
-            window.addEventListener('pointermove', (e) => {
-                if (!interactionMode) return;
-                const rect = container.getBoundingClientRect();
-                const pointerX = e.clientX - rect.left;
-                const pointerY = e.clientY - rect.top;
-
-                if (interactionMode === 'move') {
-                    stickerData.x = startX + (e.clientX - startClientX);
-                    stickerData.y = startY + (e.clientY - startClientY);
-                } else if (interactionMode === 'scale') {
-                    const curDist = Math.hypot(pointerX - stickerData.x, pointerY - stickerData.y);
-                    stickerData.size = startSize * (curDist / startDist);
-                } else if (interactionMode === 'rotate') {
-                    const curAngle = Math.atan2(pointerY - stickerData.y, pointerX - stickerData.x) * (180 / Math.PI);
-                    stickerData.rotation = startRot + (curAngle - startAngle);
-                }
-                renderStickerTransform();
-            });
-
-            window.addEventListener('pointerup', () => {
-                if (interactionMode) {
-                    interactionMode = null;
-                    saveProgressToStorage();
-                }
             });
         }
 
@@ -2348,12 +2442,16 @@
             if (isDraggingHue) handleHuePointer(e);
         });
         window.addEventListener('touchmove', (e) => {
+            if (isDraggingSV || isDraggingHue) {
+                if (e.cancelable) e.preventDefault();
+            }
             if (isDraggingSV) handleSVPointer(e);
             if (isDraggingHue) handleHuePointer(e);
         }, { passive: false });
 
         window.addEventListener('mouseup', () => { isDraggingSV = false; isDraggingHue = false; });
         window.addEventListener('touchend', () => { isDraggingSV = false; isDraggingHue = false; });
+        window.addEventListener('touchcancel', () => { isDraggingSV = false; isDraggingHue = false; });
 
         document.querySelectorAll('.quick-swatch').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -2397,6 +2495,25 @@
         const btnToggleTag = document.getElementById('btn-toggle-tag');
         const btnToggleStripe = document.getElementById('btn-toggle-stripe');
         const inputTagText = document.getElementById('input-tag-text');
+        const creditPreview = document.getElementById('credit-preview');
+        const inputCreditText = document.getElementById('input-credit-text');
+        const btnToggleCreditInvert = document.getElementById('btn-toggle-credit-invert');
+        const creditColorLabel = document.getElementById('credit-color-label');
+
+        function updateCreditUI() {
+            const trimmed = (state.creditText || '').trim();
+            if (trimmed.length > 0) {
+                creditPreview.textContent = trimmed;
+                creditPreview.classList.remove('hidden');
+            } else {
+                creditPreview.textContent = '';
+                creditPreview.classList.add('hidden');
+            }
+            creditPreview.style.color = state.creditInverted ? '#111111' : '#ffffff';
+            creditColorLabel.textContent = state.creditInverted ? '(현재: 검정)' : '(현재: 흰색)';
+            btnToggleCreditInvert.textContent = state.creditInverted ? '흰색 글씨로 변경' : '검정 글씨로 변경';
+            btnToggleCreditInvert.classList.toggle('bg-amber-700', state.creditInverted);
+        }
 
         function rebuildStickVisualsFromState(idx) {
             const sData = state.sticksData[idx];
@@ -2474,6 +2591,8 @@
                     tagText: state.tagText,
                     bgColorHex: state.bgColorHex,
                     stripeBg: state.stripeBg,
+                    creditText: state.creditText,
+                    creditInverted: state.creditInverted,
                     stickers: serializedStickers
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -2490,6 +2609,8 @@
                         tagText: state.tagText,
                         bgColorHex: state.bgColorHex,
                         stripeBg: state.stripeBg,
+                        creditText: state.creditText,
+                        creditInverted: state.creditInverted,
                         stickers: []
                     };
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackPayload));
@@ -2517,6 +2638,8 @@
                 if (typeof saved.tagText === 'string') state.tagText = saved.tagText;
                 if (saved.bgColorHex) state.bgColorHex = saved.bgColorHex;
                 if (typeof saved.stripeBg === 'boolean') state.stripeBg = saved.stripeBg;
+                if (typeof saved.creditText === 'string') state.creditText = saved.creditText;
+                if (typeof saved.creditInverted === 'boolean') state.creditInverted = saved.creditInverted;
 
                 syncToggle.checked = state.syncSticks;
                 if (state.syncSticks) {
@@ -2535,6 +2658,9 @@
                 ribbonMaterial.color.set(state.ribbonColor);
                 inputTagText.value = state.tagText;
                 updateKraftTagTexture(state.tagText);
+
+                inputCreditText.value = state.creditText;
+                updateCreditUI();
 
                 setWrappedState(state.wrapped, false);
                 setTagActiveState(state.tagActive, false);
@@ -2566,6 +2692,7 @@
         }
 
         syncToggle.addEventListener('change', (e) => {
+            cancelAllActiveDrags();
             state.syncSticks = e.target.checked;
             if (state.syncSticks) {
                 state.backupIndividualSticks = JSON.parse(JSON.stringify(state.sticksData));
@@ -2602,6 +2729,7 @@
 
         stickTabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
+                cancelAllActiveDrags();
                 state.activeStickIndex = parseInt(btn.getAttribute('data-stick'), 10);
                 stickTabBtns.forEach(b => {
                     const isSelected = parseInt(b.getAttribute('data-stick'), 10) === state.activeStickIndex;
@@ -2618,6 +2746,7 @@
         const configPanels = document.querySelectorAll('.config-panel');
 
         function openPanel(panelId) {
+            cancelAllActiveDrags();
             configPanels.forEach(p => {
                 if (p.id === panelId) p.classList.toggle('hidden');
                 else p.classList.add('hidden');
@@ -2629,9 +2758,15 @@
             });
         }
 
-        toolButtons.forEach(btn => btn.addEventListener('click', () => openPanel(btn.getAttribute('data-panel'))));
+        toolButtons.forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openPanel(btn.getAttribute('data-panel'));
+        }));
+
         document.querySelectorAll('.close-panel').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cancelAllActiveDrags();
                 configPanels.forEach(p => p.classList.add('hidden'));
                 toolButtons.forEach(b => b.classList.remove('active'));
             });
@@ -2710,6 +2845,7 @@
             const reader = new FileReader();
             reader.onload = (ev) => applyPlaqueToTargets(ev.target.result);
             reader.readAsDataURL(file);
+            e.target.value = '';
         });
         document.querySelectorAll('.preset-plaque-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPlaqueToTargets(createSampleDataURL(btn.getAttribute('data-preset'))));
@@ -2831,26 +2967,6 @@
             });
         });
 
-        const creditPreview = document.getElementById('credit-preview');
-        const inputCreditText = document.getElementById('input-credit-text');
-        const btnToggleCreditInvert = document.getElementById('btn-toggle-credit-invert');
-        const creditColorLabel = document.getElementById('credit-color-label');
-
-        function updateCreditUI() {
-            const trimmed = (state.creditText || '').trim();
-            if (trimmed.length > 0) {
-                creditPreview.textContent = trimmed;
-                creditPreview.classList.remove('hidden');
-            } else {
-                creditPreview.textContent = '';
-                creditPreview.classList.add('hidden');
-            }
-            creditPreview.style.color = state.creditInverted ? '#111111' : '#ffffff';
-            creditColorLabel.textContent = state.creditInverted ? '(현재: 검정)' : '(현재: 흰색)';
-            btnToggleCreditInvert.textContent = state.creditInverted ? '흰색 글씨로 변경' : '검정 글씨로 변경';
-            btnToggleCreditInvert.classList.toggle('bg-amber-700', state.creditInverted);
-        }
-
         inputCreditText.addEventListener('input', (e) => {
             state.creditText = e.target.value;
             updateCreditUI();
@@ -2864,9 +2980,11 @@
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => {
+            cancelAllActiveDrags();
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('pepero_atelier_saved_v36');
             stickersList.forEach(st => {
+                if (typeof st.stopDrag === 'function') st.stopDrag(false);
                 st.el.remove();
                 st.gizmoEl.remove();
             });
@@ -2880,6 +2998,8 @@
             state.tagText = 'For You, Sweetheart';
             state.bgColorHex = '#f3e4d8';
             state.stripeBg = false;
+            state.creditText = '';
+            state.creditInverted = false;
 
             syncToggle.checked = true;
             syncBg.classList.replace('bg-amber-950/30', 'bg-amber-900');
@@ -2892,6 +3012,9 @@
             ribbonMaterial.color.set(state.ribbonColor);
             inputTagText.value = state.tagText;
             updateKraftTagTexture(state.tagText);
+
+            inputCreditText.value = '';
+            updateCreditUI();
 
             setTagActiveState(false, false);
             setWrappedState(false, false);
@@ -2906,6 +3029,8 @@
         function adjustResponsiveSize() {
             const w = container.clientWidth;
             const h = container.clientHeight;
+            if (w === 0 || h === 0) return;
+
             const aspect = w / h;
             camera.aspect = aspect;
 
@@ -2921,6 +3046,7 @@
             camera.position.set(0, 0.25, finalDist);
             camera.lookAt(0, 0.25, 0);
             camera.updateProjectionMatrix();
+            camera.updateMatrixWorld();
             renderer.setSize(w, h);
 
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -2964,6 +3090,7 @@
         }
 
         document.getElementById('btn-download').addEventListener('click', () => {
+            cancelAllActiveDrags();
             deselectAllStickers();
 
             const stageW = container.clientWidth;
