@@ -784,10 +784,10 @@
             };
         }
 
-function normalizeStickState(rawStick) {
+        function normalizeStickState(rawStick) {
             const def = createDefaultStickState();
             if (!rawStick || typeof rawStick !== 'object') return def;
-            const merged = {
+            return {
                 ...def,
                 ...rawStick,
                 toppings: {
@@ -795,10 +795,6 @@ function normalizeStickState(rawStick) {
                     ...(rawStick.toppings || {})
                 }
             };
-            if (merged.drizzleType === 'double') {
-                merged.drizzleType = 'zigzag';
-            }
-            return merged;
         }
 
         const state = {
