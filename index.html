@@ -1144,7 +1144,7 @@
             return CHOCO_RADIUS * (1 + wave);
         }
 
-        function createOrganicDrizzleGeometry(seed) {
+        function createOrganicDrizzleGeometry(seed, radiusLift = 0.016, phaseOffset = 0, yShift = 0) {
             const drizzlePoints = [];
             const startY = CHOCO_BOTTOM_Y + 0.32;
             const endY = CHOCO_TOP_Y - 0.30;
@@ -1162,18 +1162,19 @@
                 ) * Math.sin(t * Math.PI);
 
                 const clampedT = Math.max(0, Math.min(1, irregularT));
-                const y = startY + clampedT * totalHeight;
+                const y = startY + clampedT * totalHeight + yShift;
 
                 const ampMod = 0.96 + Math.sin(t * Math.PI * 7 + seed * 0.5) * 0.14 + Math.cos(t * Math.PI * 13) * 0.07;
                 const phaseJitter = Math.sin(t * Math.PI * 6 + seed) * 0.45;
-                const swing = Math.sin(t * Math.PI * numWaves + seed * 0.1 + phaseJitter) * (1.02 * ampMod);
 
-                const loopDriftY = Math.cos(t * Math.PI * numWaves * 2 + seed) * 0.032;
-                const finalY = Math.max(startY, Math.min(endY, y + loopDriftY));
+                const swing = Math.sin(t * Math.PI * numWaves + seed * 0.1 + phaseJitter + phaseOffset) * (1.02 * ampMod);
+
+                const loopDriftY = Math.cos(t * Math.PI * numWaves * 2 + seed + phaseOffset) * 0.032;
+                const finalY = Math.max(startY - 0.05, Math.min(endY + 0.05, y + loopDriftY));
 
                 const latheAngle = Math.atan2(Math.cos(swing), Math.sin(swing));
                 const surfaceR = getExactChocoSurfaceRadius(finalY, latheAngle, seed);
-                const radiusOffset = surfaceR + 0.016;
+                const radiusOffset = surfaceR + radiusLift;
 
                 const x = Math.sin(swing) * radiusOffset;
                 const z = Math.cos(swing) * radiusOffset;
@@ -1304,7 +1305,7 @@
         }
 
         function createDoubleSecondDrizzleGeometry(seed) {
-            return createSwirlDrizzleGeometry(seed + 55, 0.028, -1);
+            return createOrganicDrizzleGeometry(seed, 0.028, 2.2, 0.045);
         }
 
         function createTopDripGeometry(seed) {
@@ -1604,7 +1605,6 @@
                 oreoMesh.visible = false;
                 toppingsContainer.add(oreoMesh);
 
-                // 신규 2: 동결건조 딸기 큐브 (0.7배 크기에 맞춰 표면 밀착)
                 const rStrawberry = surfaceR + 0.044;
                 const strawberryMesh = new THREE.Mesh(strawberryGeo, new THREE.MeshStandardMaterial({
                     color: strawberryColors[Math.floor(rand() * strawberryColors.length)],
@@ -1618,7 +1618,6 @@
                 strawberryMesh.visible = false;
                 toppingsContainer.add(strawberryMesh);
 
-                // 신규 3: 코코넛 슬라이스
                 const rCoconut = surfaceR + 0.054;
                 const coconutMesh = new THREE.Mesh(coconutGeo, new THREE.MeshStandardMaterial({
                     color: coconutColors[Math.floor(rand() * coconutColors.length)],
@@ -2430,27 +2429,58 @@
             }
         }
 
-        function computeProjectedBagBounds(targetW, targetH) {
+        function computeBagOuterSilhouette(targetW, targetH) {
             camera.updateMatrixWorld();
-            const topLeft3D = new THREE.Vector3(-1.78, 4.15, 0.5).project(camera);
-            const bottomRight3D = new THREE.Vector3(1.78, -4.95, 0.5).project(camera);
+            const contour3D = [
+                [-0.35,  4.25, 0.08], 
+                [-0.78,  3.95, 0.12],
+                [-1.42,  3.55, 0.16],
+                [-1.89,  3.05, 0.20], 
+                [-1.92,  1.50, 0.20],
+                [-1.94, -0.50, 0.20], 
+                [-1.95, -2.50, 0.20],
+                [-1.96, -4.55, 0.18],
+                [-1.85, -5.05, 0.16],
+                [-1.66, -5.55, 0.15], 
+                [ 0.00, -5.60, 0.18], 
+                [ 1.66, -5.55, 0.15], 
+                [ 1.85, -5.05, 0.16],
+                [ 1.96, -4.55, 0.18], 
+                [ 1.95, -2.50, 0.20],
+                [ 1.94, -0.50, 0.20], 
+                [ 1.92,  1.50, 0.20],
+                [ 1.89,  3.05, 0.20], 
+                [ 1.42,  3.55, 0.16],
+                [ 0.78,  3.95, 0.12],
+                [ 0.35,  4.25, 0.08] 
+            ];
 
-            const minX = ((topLeft3D.x + 1) / 2) * targetW;
-            const maxX = ((bottomRight3D.x + 1) / 2) * targetW;
-            const minY = ((-topLeft3D.y + 1) / 2) * targetH;
-            const maxY = ((-bottomRight3D.y + 1) / 2) * targetH;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            const points2D = contour3D.map(([x, y, z]) => {
+                const v = new THREE.Vector3(x, y, z).project(camera);
+                const px = ((v.x + 1) / 2) * targetW;
+                const py = ((-v.y + 1) / 2) * targetH;
+                if (px < minX) minX = px;
+                if (px > maxX) maxX = px;
+                if (py < minY) minY = py;
+                if (py > maxY) maxY = py;
+                return { x: px, y: py };
+            });
 
-            return { minX, maxX, minY, maxY };
+            return { minX, maxX, minY, maxY, points2D };
+        }
+
+        function computeProjectedBagBounds(targetW, targetH) {
+            return computeBagOuterSilhouette(targetW, targetH);
         }
 
         function getPackagingScreenBounds() {
             const rect = container.getBoundingClientRect();
-            const b = computeProjectedBagBounds(rect.width, rect.height);
-
-            wrapBoundGuide.style.left = `${b.minX}px`;
-            wrapBoundGuide.style.top = `${b.minY}px`;
-            wrapBoundGuide.style.width = `${b.maxX - b.minX}px`;
-            wrapBoundGuide.style.height = `${b.maxY - b.minY}px`;
+            const b = computeBagOuterSilhouette(rect.width, rect.height);
+            wrapBoundGuide.style.display = 'none';
+            const polyPoints = b.points2D.map(pt => `${pt.x.toFixed(1)}px ${pt.y.toFixed(1)}px`).join(', ');
+            stickerLayer.style.clipPath = `polygon(${polyPoints})`;
+            stickerLayer.style.webkitClipPath = `polygon(${polyPoints})`;
 
             return b;
         }
@@ -2464,10 +2494,9 @@
 
             const maxAllowedSize = Math.min(bagW * 0.96, bagH * 0.85, 340);
             stickerData.size = Math.max(44, Math.min(maxAllowedSize, stickerData.size));
-
-            const halfR = Math.min(stickerData.size * 0.42, bagW * 0.48);
-            stickerData.x = Math.max(bounds.minX + halfR, Math.min(bounds.maxX - halfR, stickerData.x));
-            stickerData.y = Math.max(bounds.minY + halfR, Math.min(bounds.maxY - halfR, stickerData.y));
+            const margin = stickerData.size * 0.35;
+            stickerData.x = Math.max(bounds.minX - margin, Math.min(bounds.maxX + margin, stickerData.x));
+            stickerData.y = Math.max(bounds.minY - margin, Math.min(bounds.maxY + margin, stickerData.y));
         }
 
         function buildWhiteDieCutStickerURL(imgElement, callback) {
@@ -3606,8 +3635,17 @@
 
             eCtx.drawImage(renderer.domElement, 0, 0, exportW, exportH);
 
-            if (state.wrapped) {
+if (state.wrapped) {
                 const scaleFactor = exportBagW / oldBagW;
+                eCtx.save();
+                eCtx.beginPath();
+                exportBounds.points2D.forEach((pt, idx) => {
+                    if (idx === 0) eCtx.moveTo(pt.x, pt.y);
+                    else eCtx.lineTo(pt.x, pt.y);
+                });
+                eCtx.closePath();
+                eCtx.clip();
+
                 stickersList.forEach(st => {
                     const relX = (st.x - oldBounds.minX) / oldBagW;
                     const relY = (st.y - oldBounds.minY) / oldBagH;
@@ -3622,6 +3660,8 @@
                     eCtx.drawImage(st.canvasSource, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
                     eCtx.restore();
                 });
+
+                eCtx.restore(); 
 
                 sticks[0].group.visible = false;
                 sticks[1].group.visible = false;
