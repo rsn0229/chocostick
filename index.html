@@ -261,6 +261,34 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        /* 토핑 가로 스와이프 전용 스타일 */
+        .topping-scroll-container {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(92, 58, 33, 0.25) transparent;
+        }
+        .topping-scroll-container * {
+            touch-action: pan-x;
+        }
+        .topping-scroll-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        .topping-scroll-container::-webkit-scrollbar-track {
+            background: rgba(92, 58, 33, 0.06);
+            border-radius: 9999px;
+        }
+        .topping-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(92, 58, 33, 0.28);
+            border-radius: 9999px;
+        }
     </style>
 </head>
 <body>
@@ -397,44 +425,98 @@
             </div>
 
             <div id="panel-topping" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
-                <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-bold text-amber-950">
                         <i class="fa-solid fa-wand-magic-sparkles mr-1.5 text-amber-800"></i>토핑 조합 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
                     </span>
                     <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <p class="text-[11px] text-amber-800/80 mb-2.5">복수 선택이 가능합니다.</p>
-                <div class="grid grid-cols-5 gap-1.5 text-center">
-                    <button data-topping="hearts" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+
+                <div class="flex items-center justify-between bg-white/60 px-3 py-1.5 rounded-2xl mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-amber-950 block">토핑 듬뿍 올리기</span>
+                        <span class="text-[10px] text-amber-800/80">빈틈없이 풍성하게 토핑을 채웁니다</span>
+                    </div>
+                    <button id="btn-toggle-abundant" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-900 text-white shadow transition">
+                        듬뿍 켜기
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between mb-1.5">
+                    <p class="text-[11px] text-amber-800/80">복수 선택이 가능합니다.</p>
+                    <span class="text-[10px] text-amber-700/75 font-medium"><i class="fa-solid fa-arrows-left-right mr-1"></i>옆으로 밀어서 보기</span>
+                </div>
+
+                <div id="topping-swipe-list" class="topping-scroll-container text-center">
+                    <button data-topping="hearts" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
                         <span class="text-lg">🩷</span>
                         <span class="text-[11px] font-medium text-amber-950">하트</span>
                     </button>
-                    <button data-topping="stars" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                    <button data-topping="stars" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
                         <span class="text-lg">⭐</span>
                         <span class="text-[11px] font-medium text-amber-950">별</span>
                     </button>
-                    <button data-topping="sprinkles" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                    <button data-topping="sprinkles" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
                         <span class="text-lg">🌈</span>
                         <span class="text-[11px] font-medium text-amber-950">스프링클</span>
                     </button>
-                    <button data-topping="pearls" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                    <button data-topping="pearls" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
                         <span class="text-lg">🫧</span>
                         <span class="text-[11px] font-medium text-amber-950">진주초코</span>
                     </button>
-                    <button data-topping="crunch" class="topping-opt flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                    <button data-topping="crunch" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
                         <span class="text-lg">🍪</span>
                         <span class="text-[11px] font-medium text-amber-950">크런치</span>
+                    </button>
+                    <button data-topping="oreo" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🖤</span>
+                        <span class="text-[11px] font-medium text-amber-950">오레오</span>
+                    </button>
+                    <button data-topping="strawberry" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🍓</span>
+                        <span class="text-[11px] font-medium text-amber-950">딸기큐브</span>
+                    </button>
+                    <button data-topping="coconut" class="topping-opt flex-shrink-0 w-[60px] flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl bg-white/60 hover:bg-white border-2 border-transparent transition">
+                        <span class="text-lg">🥥</span>
+                        <span class="text-[11px] font-medium text-amber-950">코코넛</span>
                     </button>
                 </div>
             </div>
 
             <div id="panel-drizzle" class="config-panel hidden glass-panel rounded-3xl p-4 pointer-events-auto popover-enter">
-                <div class="flex items-center justify-between mb-2.5">
+                <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-bold text-amber-950">
                         <i class="fa-solid fa-wave-square mr-1.5 text-amber-800"></i>드리즐 초코 <span class="target-badge text-[10px] font-normal text-amber-700 ml-1">(양쪽 공통)</span>
                     </span>
                     <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+
+                <!-- 상단: 드리즐 종류 선택 영역 -->
+                <div class="bg-white/60 rounded-2xl p-2 mb-2.5">
+                    <div class="flex items-center justify-between px-1 mb-1.5">
+                        <span class="text-[11px] font-bold text-amber-950">드리즐 모양 선택</span>
+                        <div id="double-layer-tabs" class="hidden flex items-center bg-amber-950/10 p-0.5 rounded-full">
+                            <button data-drizzle-layer="1" class="drizzle-layer-btn px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-900 text-white transition">1차 색상</button>
+                            <button data-drizzle-layer="2" class="drizzle-layer-btn px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-900 transition">2차 색상</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5 text-center">
+                        <button data-drizzle-type="zigzag" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-bold bg-amber-900 text-white shadow-sm transition">
+                            지그재그
+                        </button>
+                        <button data-drizzle-type="swirl" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition">
+                            사선 스월
+                        </button>
+                        <button data-drizzle-type="double" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition">
+                            더블
+                        </button>
+                        <button data-drizzle-type="drip" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition">
+                            상단 드립
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 하단: 드리즐 색상 선택 영역 -->
                 <div class="grid grid-cols-5 gap-2 text-center">
                     <button data-drizzle-hex="none" class="drizzle-opt swatch-btn selected flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
                         <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs"><i class="fa-solid fa-ban"></i></span>
@@ -677,7 +759,7 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'pepero_atelier_saved_v37';
+        const STORAGE_KEY = 'pepero_atelier_saved_v38';
 
         function createDefaultStickState() {
             return {
@@ -687,13 +769,33 @@
                     stars: false,
                     sprinkles: false,
                     pearls: false,
-                    crunch: false
+                    crunch: false,
+                    oreo: false,
+                    strawberry: false,
+                    coconut: false
                 },
+                toppingAbundant: false,
+                drizzleType: 'zigzag',
                 drizzleHex: 'none',
+                drizzleSecondHex: '#f3e3c6',
+                drizzleLayerTarget: 1,
                 plaqueBorderColor: '#3e2115',
                 plaqueActive: false,
                 plaqueImageSrc: null,
                 plaqueY: 1.45
+            };
+        }
+
+        function normalizeStickState(rawStick) {
+            const def = createDefaultStickState();
+            if (!rawStick || typeof rawStick !== 'object') return def;
+            return {
+                ...def,
+                ...rawStick,
+                toppings: {
+                    ...def.toppings,
+                    ...(rawStick.toppings || {})
+                }
             };
         }
 
@@ -831,7 +933,6 @@
             const baseCol = new THREE.Color(hex);
             const lightCol = baseCol.clone().lerp(new THREE.Color('#ffffff'), 0.45);
             const darkCol = baseCol.clone().lerp(new THREE.Color('#3b2314'), 0.12);
-            document.body.style.background = `radial-gradient(circle at 50% 45%, #fff9f5 0%, #f3e4d8 65%, #e4cebc 100%)`;
             document.body.style.background = `radial-gradient(circle at 50% 45%, #${lightCol.getHexString()} 0%, #${baseCol.getHexString()} 65%, #${darkCol.getHexString()} 100%)`;
             renderStageBackgroundPattern();
         }
@@ -974,11 +1075,52 @@
             return geo;
         }
 
+        function createStrawberryCubeGeometry() {
+            const s = 0.13;
+            const shape = new THREE.Shape();
+            const r = 0.025;
+            shape.moveTo(-s + r, -s);
+            shape.lineTo(s - r, -s);
+            shape.quadraticCurveTo(s, -s, s, -s + r);
+            shape.lineTo(s, s - r);
+            shape.quadraticCurveTo(s, s, s - r, s);
+            shape.lineTo(-s + r, s);
+            shape.quadraticCurveTo(-s, s, -s, s - r);
+            shape.lineTo(-s, -s + r);
+            shape.quadraticCurveTo(-s, -s, -s + r, -s);
+
+            const geo = new THREE.ExtrudeGeometry(shape, {
+                depth: 0.11,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: 0.02,
+                bevelThickness: 0.02
+            });
+            geo.center();
+            geo.scale(0.7, 0.7, 0.7); 
+            return geo;
+        }
+
+        function createCoconutFlakeGeometry() {
+            const curvePts = [
+                new THREE.Vector3(-0.11, -0.02, 0.01),
+                new THREE.Vector3( 0.00,  0.01, 0.035),
+                new THREE.Vector3( 0.11, -0.01, 0.01)
+            ];
+            const curve = new THREE.CatmullRomCurve3(curvePts);
+            const geo = new THREE.TubeGeometry(curve, 10, 0.042, 6, false);
+            geo.scale(1.0, 0.65, 0.28);
+            return geo;
+        }
+
         const heartGeo = createHeartGeometry();
         const starGeo = createStarGeometry();
         const sprinkleGeo = new THREE.CylinderGeometry(0.042, 0.042, 0.27, 12);
         const pearlGeo = new THREE.SphereGeometry(0.11, 16, 16);
         const crunchGeo = new THREE.DodecahedronGeometry(0.14, 0);
+        const strawberryGeo = createStrawberryCubeGeometry();
+        const coconutGeo = createCoconutFlakeGeometry();
 
         const sticks = [];
         const stickConfigs = [
@@ -1068,6 +1210,182 @@
                 }
             }
             geo.computeVertexNormals();
+            return geo;
+        }
+
+        function createSwirlDrizzleGeometry(seed, radiusLift = 0.016, direction = 1) {
+            const slashCount = 4; 
+            const startY = CHOCO_BOTTOM_Y + 0.55;
+            const endY = CHOCO_TOP_Y - 0.55;
+            const spanY = endY - startY;
+            const bandStep = spanY / slashCount;
+
+            const geometries = [];
+            const rand = seededRandom(seed + (direction > 0 ? 31 : 89));
+
+            for (let s = 0; s < slashCount; s++) {
+                const pts = [];
+                const subSteps = 44;
+
+                const baseBandY = startY + (s + 0.5) * bandStep + (rand() - 0.5) * 0.14;
+                const slantHeight = (0.68 + rand() * 0.24) * direction;
+                const wavePhase = rand() * Math.PI * 2;
+                const waveAmp = 0.045 + rand() * 0.035;
+
+                const startTheta = -1.42;
+                const endTheta = 1.42;
+
+                for (let i = 0; i <= subSteps; i++) {
+                    const u = i / subSteps;
+                    const theta = startTheta + u * (endTheta - startTheta);
+
+                    const organicCurveY =
+                        Math.sin(u * Math.PI * 2 + wavePhase) * waveAmp +
+                        Math.cos(u * Math.PI * 3 - wavePhase) * (waveAmp * 0.4);
+
+                    const y = baseBandY + (u - 0.5) * slantHeight + organicCurveY;
+                    const clampedY = Math.max(CHOCO_BOTTOM_Y + 0.28, Math.min(CHOCO_TOP_Y - 0.28, y));
+
+                    const latheAngle = Math.atan2(Math.cos(theta), Math.sin(theta));
+                    const surfaceR = getExactChocoSurfaceRadius(clampedY, latheAngle, seed);
+
+                    const edgeDip = Math.pow(Math.abs(u - 0.5) * 2, 3.2) * 0.022;
+                    const r = surfaceR + radiusLift - edgeDip;
+
+                    pts.push(new THREE.Vector3(Math.sin(theta) * r, clampedY, Math.cos(theta) * r));
+                }
+
+                const curve = new THREE.CatmullRomCurve3(pts);
+                const segs = 48;
+                const radSegs = 10;
+                const tubeGeo = new THREE.TubeGeometry(curve, segs, 0.038, radSegs, false);
+
+                const pos = tubeGeo.attributes.position;
+                const ringSize = radSegs + 1;
+                for (let seg = 0; seg <= segs; seg++) {
+                    const u = seg / segs;
+                    const centerPt = curve.getPointAt(u);
+                    const thick = (0.88 + Math.sin(u * Math.PI) * 0.22) * (1 + Math.sin(u * Math.PI * 5 + wavePhase) * 0.10);
+
+                    for (let rIdx = 0; rIdx < ringSize; rIdx++) {
+                        const idx = seg * ringSize + rIdx;
+                        pos.setX(idx, centerPt.x + (pos.getX(idx) - centerPt.x) * (thick * 0.78));
+                        pos.setY(idx, centerPt.y + (pos.getY(idx) - centerPt.y) * thick);
+                        pos.setZ(idx, centerPt.z + (pos.getZ(idx) - centerPt.z) * (thick * 0.62));
+                    }
+                }
+                tubeGeo.computeVertexNormals();
+                geometries.push(tubeGeo);
+            }
+
+            const totalVerts = geometries.reduce((acc, g) => acc + g.attributes.position.count, 0);
+            const mergedGeo = new THREE.BufferGeometry();
+            const mergedPos = new Float32Array(totalVerts * 3);
+            const mergedNorm = new Float32Array(totalVerts * 3);
+            const mergedIndices = [];
+
+            let vertOffset = 0;
+            geometries.forEach(g => {
+                mergedPos.set(g.attributes.position.array, vertOffset * 3);
+                mergedNorm.set(g.attributes.normal.array, vertOffset * 3);
+                if (g.index) {
+                    const idxArr = g.index.array;
+                    for (let k = 0; k < idxArr.length; k++) {
+                        mergedIndices.push(idxArr[k] + vertOffset);
+                    }
+                }
+                vertOffset += g.attributes.position.count;
+            });
+
+            mergedGeo.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+            mergedGeo.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+            mergedGeo.setIndex(mergedIndices);
+            return mergedGeo;
+        }
+
+        function createDoubleSecondDrizzleGeometry(seed) {
+            return createSwirlDrizzleGeometry(seed + 55, 0.028, -1);
+        }
+
+        function createTopDripGeometry(seed) {
+            const dripBaseY = 1.18;
+            const midEndY = CHOCO_TOP_Y - 0.45;
+            const profile = [];
+
+            const bodySteps = 56;
+            for (let i = 0; i <= bodySteps; i++) {
+                const t = i / bodySteps;
+                const y = dripBaseY + t * (midEndY - dripBaseY);
+
+                let rimFactor = 1.0;
+                if (t < 0.08) {
+                    const u = t / 0.08;
+                    rimFactor = Math.pow(Math.sin(u * (Math.PI / 2)), 0.55);
+                }
+                const dropletBead = (t >= 0.02 && t < 0.18)
+                    ? Math.sin(((t - 0.02) / 0.16) * Math.PI) * 0.009
+                    : 0;
+
+                const r = CHOCO_RADIUS + 0.016 * rimFactor + dropletBead;
+                profile.push(new THREE.Vector2(r, y));
+            }
+
+            const topDomeSteps = 18;
+            for (let i = 1; i <= topDomeSteps; i++) {
+                const t = i / topDomeSteps;
+                const a = t * (Math.PI / 2);
+                const r = Math.cos(a) * (CHOCO_RADIUS + 0.016);
+                const y = midEndY + Math.sin(a) * 0.464;
+                profile.push(new THREE.Vector2(r, y));
+            }
+
+            const segments = 96;
+            const geo = new THREE.LatheGeometry(profile, segments);
+            const pos = geo.attributes.position;
+
+            function getRoundedDropletWave(angle) {
+                const raw =
+                    Math.sin(angle * 3 + seed * 1.2) * 0.62 +
+                    Math.cos(angle * 2 - seed * 0.8) * 0.38;
+
+                if (raw >= 0) {
+                    const flatTip = Math.sin((raw * Math.PI) / 2);
+                    return Math.pow(flatTip, 0.58) * 0.28;
+                } else {
+                    const softArch = Math.sin((-raw * Math.PI) / 2);
+                    return -Math.pow(softArch, 0.75) * 0.14;
+                }
+            }
+
+            for (let i = 0; i < pos.count; i++) {
+                let vx = pos.getX(i);
+                let vy = pos.getY(i);
+                let vz = pos.getZ(i);
+                const angle = Math.atan2(vz, vx);
+
+                const organicWave = getChocoOrganicWave(vy, angle, seed);
+
+                if (vy < midEndY - 0.1) {
+                    const weight = Math.max(0, 1 - (vy - dripBaseY) / (midEndY - 0.1 - dripBaseY));
+                    const smoothWeight = weight * weight * (3 - 2 * weight);
+                    const dropOffset = getRoundedDropletWave(angle);
+
+                    vy -= dropOffset * smoothWeight;
+
+                    if (dropOffset > 0.05 && weight > 0.65) {
+                        const tipProgress = (weight - 0.65) / 0.35;
+                        const beadPlump = Math.sin(tipProgress * Math.PI) * (dropOffset * 0.035);
+                        vx *= (1 + beadPlump);
+                        vz *= (1 + beadPlump);
+                    }
+                }
+
+                pos.setX(i, vx * (1 + organicWave));
+                pos.setY(i, vy);
+                pos.setZ(i, vz * (1 + organicWave));
+            }
+
+            fixLatheSeamNormals(geo, segments);
             return geo;
         }
 
@@ -1175,7 +1493,8 @@
             fixLatheSeamNormals(chocoGeo, chocoSegments);
             stickGroup.add(new THREE.Mesh(chocoGeo, stickChocoMaterial));
 
-            const TOTAL_TOPPING_SLOTS = 38;
+            const BASE_TOPPING_SLOTS = 38;
+            const TOTAL_TOPPING_SLOTS = 76;
             const rand = seededRandom(cfg.seed + 77);
             const toppingSlots = [];
 
@@ -1184,14 +1503,20 @@
             const sprinkleColors = [0xff758f, 0xffd166, 0x70d6ff, 0xc77dff, 0x95d5b2, 0xffffff];
             const pearlColors = [0xfff8eb, 0xfce1e4, 0xe8d5b7];
             const crunchColors = [0xc68642, 0xa86828, 0xe0a96d, 0x6e4720];
+            const oreoColors = [0x242021, 0x1a1718, 0x332d2f, 0x1f1b1c, 0xf5efe6];
+            const strawberryColors = [0xe63946, 0xff4d6d, 0xc9184a, 0xff758f];
+            const coconutColors = [0xfffdf9, 0xfbf5eb, 0xf5ead8];
+            const goldColors = [0xffd700, 0xffdf4f, 0xf4c430];
 
             const toppingsContainer = new THREE.Group();
             stickGroup.add(toppingsContainer);
 
             for (let i = 0; i < TOTAL_TOPPING_SLOTS; i++) {
-                const band = (i + rand() * 0.85) / TOTAL_TOPPING_SLOTS;
-                const y = (CHOCO_BOTTOM_Y + 0.45) + band * (chocoHeight - 0.92);
-                const theta = (rand() - 0.5) * Math.PI * 1.32;
+                const isExtraSlot = i >= BASE_TOPPING_SLOTS;
+                const localIndex = isExtraSlot ? (i - BASE_TOPPING_SLOTS) : i;
+                const band = (localIndex + rand() * 0.85) / BASE_TOPPING_SLOTS;
+                const y = (CHOCO_BOTTOM_Y + 0.42) + band * (chocoHeight - 0.86);
+                const theta = (rand() - 0.5) * Math.PI * (isExtraSlot ? 1.42 : 1.32);
 
                 const latheAngle = Math.atan2(Math.cos(theta), Math.sin(theta));
                 const surfaceR = getExactChocoSurfaceRadius(y, latheAngle, cfg.seed);
@@ -1265,24 +1590,87 @@
                 crunchMesh.visible = false;
                 toppingsContainer.add(crunchMesh);
 
+                const rOreo = surfaceR + 0.058;
+                const oreoColorPick = rand() > 0.16
+                    ? oreoColors[Math.floor(rand() * 4)]
+                    : oreoColors[4];
+                const oreoMesh = new THREE.Mesh(crunchGeo, new THREE.MeshStandardMaterial({
+                    color: oreoColorPick,
+                    roughness: 0.90
+                }));
+                oreoMesh.position.set(Math.sin(theta) * rOreo, y, Math.cos(theta) * rOreo);
+                oreoMesh.scale.set(0.85 + rand() * 0.55, 0.65 + rand() * 0.45, 0.5 + rand() * 0.32);
+                oreoMesh.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
+                oreoMesh.visible = false;
+                toppingsContainer.add(oreoMesh);
+
+                // 신규 2: 동결건조 딸기 큐브 (0.7배 크기에 맞춰 표면 밀착)
+                const rStrawberry = surfaceR + 0.044;
+                const strawberryMesh = new THREE.Mesh(strawberryGeo, new THREE.MeshStandardMaterial({
+                    color: strawberryColors[Math.floor(rand() * strawberryColors.length)],
+                    roughness: 0.76
+                }));
+                strawberryMesh.position.set(Math.sin(theta) * rStrawberry, y, Math.cos(theta) * rStrawberry);
+                strawberryMesh.lookAt(strawberryMesh.position.clone().add(normal));
+                strawberryMesh.rotation.z = rand() * Math.PI * 2;
+                const stScale = 0.78 + rand() * 0.38;
+                strawberryMesh.scale.set(stScale, stScale, stScale * 0.85);
+                strawberryMesh.visible = false;
+                toppingsContainer.add(strawberryMesh);
+
+                // 신규 3: 코코넛 슬라이스
+                const rCoconut = surfaceR + 0.054;
+                const coconutMesh = new THREE.Mesh(coconutGeo, new THREE.MeshStandardMaterial({
+                    color: coconutColors[Math.floor(rand() * coconutColors.length)],
+                    roughness: 0.62
+                }));
+                coconutMesh.position.set(Math.sin(theta) * rCoconut, y, Math.cos(theta) * rCoconut);
+                coconutMesh.lookAt(coconutMesh.position.clone().add(normal));
+                coconutMesh.rotation.z = rand() * Math.PI * 2;
+                const ccScale = 0.88 + rand() * 0.36;
+                coconutMesh.scale.set(ccScale, ccScale, ccScale);
+                coconutMesh.visible = false;
+                toppingsContainer.add(coconutMesh);
+
                 toppingSlots.push({
+                    isExtraSlot,
                     hearts: heartMesh,
                     stars: starMesh,
                     sprinkles: sprinkleHolder,
                     pearls: pearlMesh,
-                    crunch: crunchMesh
+                    crunch: crunchMesh,
+                    oreo: oreoMesh,
+                    strawberry: strawberryMesh,
+                    coconut: coconutMesh
                 });
             }
 
-            const drizzleGeo = createOrganicDrizzleGeometry(cfg.seed);
-            const drizzleMat = new THREE.MeshStandardMaterial({
+            const primaryDrizzleMat = new THREE.MeshStandardMaterial({
                 color: getStickChocoColor('#f3e3c6'),
                 roughness: 0.70,
                 metalness: 0.01
             });
-            const drizzleMesh = new THREE.Mesh(drizzleGeo, drizzleMat);
-            drizzleMesh.visible = false;
-            stickGroup.add(drizzleMesh);
+            const secondaryDrizzleMat = new THREE.MeshStandardMaterial({
+                color: getStickChocoColor('#f48fb1'),
+                roughness: 0.70,
+                metalness: 0.01
+            });
+
+            const zigzagMesh = new THREE.Mesh(createOrganicDrizzleGeometry(cfg.seed), primaryDrizzleMat);
+            zigzagMesh.visible = false;
+            stickGroup.add(zigzagMesh);
+
+            const swirlMesh = new THREE.Mesh(createSwirlDrizzleGeometry(cfg.seed), primaryDrizzleMat);
+            swirlMesh.visible = false;
+            stickGroup.add(swirlMesh);
+
+            const doubleSecondMesh = new THREE.Mesh(createDoubleSecondDrizzleGeometry(cfg.seed), secondaryDrizzleMat);
+            doubleSecondMesh.visible = false;
+            stickGroup.add(doubleSecondMesh);
+
+            const topDripMesh = new THREE.Mesh(createTopDripGeometry(cfg.seed), primaryDrizzleMat);
+            topDripMesh.visible = false;
+            stickGroup.add(topDripMesh);
 
             const plaqueSlot = new THREE.Group();
             const initialY = state.sticksData[stickIndex].plaqueY;
@@ -1296,8 +1684,14 @@
                 seed: cfg.seed,
                 chocoMaterial: stickChocoMaterial,
                 toppingSlots,
-                drizzleMesh,
-                drizzleMat,
+                drizzleMeshes: {
+                    zigzag: zigzagMesh,
+                    swirl: swirlMesh,
+                    doubleSecond: doubleSecondMesh,
+                    drip: topDripMesh
+                },
+                drizzleMat: primaryDrizzleMat,
+                drizzleSecondMat: secondaryDrizzleMat,
                 plaqueSlot
             };
         }
@@ -1311,23 +1705,64 @@
             stick.plaqueSlot.position.set(0, clampedY, CHOCO_RADIUS + 0.105);
         }
 
+        const ALL_TOPPING_KEYS = ['hearts', 'stars', 'sprinkles', 'pearls', 'crunch', 'oreo', 'strawberry', 'coconut'];
+
         function updateStickToppings(stickIdx) {
             const stickObj = sticks[stickIdx];
-            const tState = state.sticksData[stickIdx].toppings;
-            const activeTypes = Object.keys(tState).filter(k => tState[k]);
+            const sData = state.sticksData[stickIdx];
+            const tState = sData.toppings;
+            const activeTypes = ALL_TOPPING_KEYS.filter(k => tState[k]);
 
             stickObj.toppingSlots.forEach((slot, idx) => {
-                slot.hearts.visible = false;
-                slot.stars.visible = false;
-                slot.sprinkles.visible = false;
-                slot.pearls.visible = false;
-                slot.crunch.visible = false;
+                ALL_TOPPING_KEYS.forEach(k => {
+                    slot[k].visible = false;
+                });
+
+                if (slot.isExtraSlot && !sData.toppingAbundant) return;
 
                 if (activeTypes.length > 0) {
                     const chosenType = activeTypes[idx % activeTypes.length];
                     slot[chosenType].visible = true;
                 }
             });
+        }
+
+        function updateStickDrizzleVisuals(stickIdx) {
+            const stickObj = sticks[stickIdx];
+            const sData = state.sticksData[stickIdx];
+            const { zigzag, swirl, doubleSecond, drip } = stickObj.drizzleMeshes;
+
+            zigzag.visible = false;
+            swirl.visible = false;
+            doubleSecond.visible = false;
+            drip.visible = false;
+
+            const type = sData.drizzleType || 'zigzag';
+            const hex1 = sData.drizzleHex;
+            const hex2 = sData.drizzleSecondHex || '#f3e3c6';
+
+            if (type === 'double') {
+                if (hex1 !== 'none') {
+                    zigzag.visible = true;
+                    stickObj.drizzleMat.color.copy(getStickChocoColor(hex1));
+                }
+                if (hex2 !== 'none') {
+                    doubleSecond.visible = true;
+                    stickObj.drizzleSecondMat.color.copy(getStickChocoColor(hex2));
+                }
+                return;
+            }
+
+            if (hex1 === 'none') return;
+            stickObj.drizzleMat.color.copy(getStickChocoColor(hex1));
+
+            if (type === 'zigzag') {
+                zigzag.visible = true;
+            } else if (type === 'swirl') {
+                swirl.visible = true;
+            } else if (type === 'drip') {
+                drip.visible = true;
+            }
         }
 
         function getTrimmedImageCanvas(imgElement) {
@@ -1604,41 +2039,33 @@
             }
         });
 
-        function createSampleDataURL(type) {
-            const c = document.createElement('canvas');
-            c.width = 200;
-            c.height = 200;
-            const ctx = c.getContext('2d');
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+        const toppingSwipeList = document.getElementById('topping-swipe-list');
+        let isMouseScrollingToppings = false;
+        let scrollStartX = 0;
+        let scrollStartLeft = 0;
+        let hasDraggedTopping = false;
 
-            if (type === 'bear') {
-                ctx.fillStyle = '#c68642';
-                ctx.beginPath(); ctx.arc(62, 62, 24, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(138, 62, 24, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#e6b88a';
-                ctx.beginPath(); ctx.arc(62, 62, 12, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(138, 62, 12, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#c68642';
-                ctx.beginPath(); ctx.arc(100, 108, 52, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#fff5e6';
-                ctx.beginPath(); ctx.ellipse(100, 118, 22, 17, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#3b1e12';
-                ctx.beginPath(); ctx.arc(80, 96, 6, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(120, 96, 6, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(100, 112, 7, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#ff9ebb';
-                ctx.beginPath(); ctx.arc(65, 110, 9, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(135, 110, 9, 0, Math.PI * 2); ctx.fill();
-            } else if (type === 'clover') {
-                ctx.font = '115px sans-serif';
-                ctx.fillText('🍀', 100, 108);
-            } else if (type === 'rabbit') {
-                ctx.font = '115px sans-serif';
-                ctx.fillText('🐰', 100, 108);
+        toppingSwipeList.addEventListener('mousedown', (e) => {
+            isMouseScrollingToppings = true;
+            hasDraggedTopping = false;
+            scrollStartX = e.pageX;
+            scrollStartLeft = toppingSwipeList.scrollLeft;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseScrollingToppings) return;
+            const dx = e.pageX - scrollStartX;
+            if (Math.abs(dx) > 5) hasDraggedTopping = true;
+            toppingSwipeList.scrollLeft = scrollStartLeft - dx;
+        });
+        window.addEventListener('mouseup', () => {
+            isMouseScrollingToppings = false;
+        });
+        toppingSwipeList.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                toppingSwipeList.scrollLeft += e.deltaY;
+                e.preventDefault();
             }
-            return c.toDataURL('image/png');
-        }
+        }, { passive: false });
 
         const packagingGroup = new THREE.Group();
         packagingGroup.visible = false;
@@ -2275,57 +2702,6 @@
             });
         }
 
-        function createPresetStickerImage(type, cb) {
-            const c = document.createElement('canvas');
-            c.width = 200;
-            c.height = 200;
-            const ctx = c.getContext('2d');
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            if (type === 'heart') {
-                ctx.fillStyle = '#ff5c8a';
-                ctx.beginPath();
-                ctx.arc(72, 82, 34, 0, Math.PI * 2);
-                ctx.arc(128, 82, 34, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(40, 94);
-                ctx.lineTo(100, 162);
-                ctx.lineTo(160, 94);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 28px "Noto Sans KR", sans-serif';
-                ctx.fillText('LOVE', 100, 102);
-            } else if (type === 'bear') {
-                ctx.font = '110px sans-serif';
-                ctx.fillText('🧸', 100, 105);
-            } else if (type === 'ribbon') {
-                ctx.font = '110px sans-serif';
-                ctx.fillText('🎀', 100, 105);
-            } else if (type === 'sparkle') {
-                ctx.fillStyle = '#ffd166';
-                ctx.font = 'bold 95px sans-serif';
-                ctx.fillText('✨', 100, 95);
-                ctx.fillStyle = '#5c3a21';
-                ctx.font = 'bold 24px "Noto Sans KR", sans-serif';
-                ctx.fillText('SWEET', 100, 148);
-            }
-
-            const img = new Image();
-            img.onload = () => buildWhiteDieCutStickerURL(img, cb);
-            img.src = c.toDataURL('image/png');
-        }
-
-        document.querySelectorAll('.preset-sticker-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                createPresetStickerImage(btn.getAttribute('data-sticker-preset'), (url, canvasSrc) => {
-                    spawnStickerOnStage(url, canvasSrc);
-                });
-            });
-        });
-
         document.getElementById('input-sticker-img').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -2498,6 +2874,8 @@
         const stickSelector = document.getElementById('stick-selector');
         const stickTabBtns = document.querySelectorAll('.stick-tab-btn');
         const targetBadges = document.querySelectorAll('.target-badge');
+        const btnToggleAbundant = document.getElementById('btn-toggle-abundant');
+        const doubleLayerTabs = document.getElementById('double-layer-tabs');
         const btnToggleWrap = document.getElementById('btn-toggle-wrap');
         const btnToggleTag = document.getElementById('btn-toggle-tag');
         const btnToggleStripe = document.getElementById('btn-toggle-stripe');
@@ -2526,14 +2904,7 @@
             const sData = state.sticksData[idx];
             sticks[idx].chocoMaterial.color.copy(getStickChocoColor(sData.chocoHex));
             updateStickToppings(idx);
-
-            if (sData.drizzleHex === 'none') {
-                sticks[idx].drizzleMesh.visible = false;
-            } else {
-                sticks[idx].drizzleMesh.visible = true;
-                sticks[idx].drizzleMat.color.copy(getStickChocoColor(sData.drizzleHex));
-            }
-
+            updateStickDrizzleVisuals(idx);
             setPlaqueSlotHeight(idx, sData.plaqueY);
 
             if (sData.plaqueActive && sData.plaqueImageSrc) {
@@ -2557,14 +2928,38 @@
                 btn.classList.toggle('selected', btn.getAttribute('data-choco-hex').toLowerCase() === sData.chocoHex.toLowerCase());
             });
 
+            btnToggleAbundant.textContent = sData.toppingAbundant ? '듬뿍 해제' : '듬뿍 켜기';
+            btnToggleAbundant.classList.toggle('bg-amber-700', sData.toppingAbundant);
+
             document.querySelectorAll('.topping-opt').forEach(btn => {
                 const key = btn.getAttribute('data-topping');
-                btn.classList.toggle('border-amber-900', sData.toppings[key]);
-                btn.classList.toggle('bg-white', sData.toppings[key]);
+                btn.classList.toggle('border-amber-900', !!sData.toppings[key]);
+                btn.classList.toggle('bg-white', !!sData.toppings[key]);
             });
 
+            const curDrizzleType = sData.drizzleType || 'zigzag';
+            document.querySelectorAll('.drizzle-type-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-drizzle-type') === curDrizzleType;
+                btn.className = isSelected
+                    ? 'drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-bold bg-amber-900 text-white shadow-sm transition'
+                    : 'drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition';
+            });
+
+            doubleLayerTabs.classList.toggle('hidden', curDrizzleType !== 'double');
+            const activeLayer = sData.drizzleLayerTarget || 1;
+            document.querySelectorAll('.drizzle-layer-btn').forEach(btn => {
+                const isTarget = parseInt(btn.getAttribute('data-drizzle-layer'), 10) === activeLayer;
+                btn.className = isTarget
+                    ? 'drizzle-layer-btn px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-900 text-white transition'
+                    : 'drizzle-layer-btn px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-900 transition';
+            });
+
+            const activeDrizzleHex = (curDrizzleType === 'double' && activeLayer === 2)
+                ? (sData.drizzleSecondHex || '#f3e3c6')
+                : sData.drizzleHex;
+
             document.querySelectorAll('.drizzle-opt').forEach(btn => {
-                btn.classList.toggle('selected', btn.getAttribute('data-drizzle-hex').toLowerCase() === sData.drizzleHex.toLowerCase());
+                btn.classList.toggle('selected', btn.getAttribute('data-drizzle-hex').toLowerCase() === activeDrizzleHex.toLowerCase());
             });
 
             document.querySelectorAll('.plaque-border-btn').forEach(btn => {
@@ -2627,17 +3022,25 @@
 
         function loadProgressFromStorage() {
             try {
-                const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('pepero_atelier_saved_v36');
+                const raw = localStorage.getItem(STORAGE_KEY)
+                    || localStorage.getItem('pepero_atelier_saved_v37')
+                    || localStorage.getItem('pepero_atelier_saved_v36');
                 if (!raw) return;
                 const saved = JSON.parse(raw);
 
                 if (typeof saved.syncSticks === 'boolean') state.syncSticks = saved.syncSticks;
                 if (typeof saved.activeStickIndex === 'number') state.activeStickIndex = saved.activeStickIndex;
                 if (Array.isArray(saved.sticksData) && saved.sticksData.length === 2) {
-                    state.sticksData = saved.sticksData;
+                    state.sticksData = [
+                        normalizeStickState(saved.sticksData[0]),
+                        normalizeStickState(saved.sticksData[1])
+                    ];
                 }
-                if (saved.backupIndividualSticks) {
-                    state.backupIndividualSticks = saved.backupIndividualSticks;
+                if (saved.backupIndividualSticks && saved.backupIndividualSticks.length === 2) {
+                    state.backupIndividualSticks = [
+                        normalizeStickState(saved.backupIndividualSticks[0]),
+                        normalizeStickState(saved.backupIndividualSticks[1])
+                    ];
                 }
                 if (typeof saved.wrapped === 'boolean') state.wrapped = saved.wrapped;
                 if (saved.ribbonColor) state.ribbonColor = saved.ribbonColor;
@@ -2797,8 +3200,24 @@
             openCustomColorPicker('초콜릿 색상 지정', state.sticksData[refIdx].chocoHex, setBaseChocoColor);
         });
 
+        btnToggleAbundant.addEventListener('click', () => {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            const nextAbundant = !state.sticksData[refIdx].toppingAbundant;
+            getTargetStickIndices().forEach(idx => {
+                state.sticksData[idx].toppingAbundant = nextAbundant;
+                updateStickToppings(idx);
+            });
+            updateBackupIfIndividual();
+            refreshPanelUIStates();
+            saveProgressToStorage();
+        });
+
         document.querySelectorAll('.topping-opt').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (hasDraggedTopping) {
+                    hasDraggedTopping = false;
+                    return;
+                }
                 const key = btn.getAttribute('data-topping');
                 const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
                 const nextVal = !state.sticksData[refIdx].toppings[key];
@@ -2812,15 +3231,47 @@
             });
         });
 
+        document.querySelectorAll('.drizzle-type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const chosenType = btn.getAttribute('data-drizzle-type');
+                getTargetStickIndices().forEach(idx => {
+                    const sData = state.sticksData[idx];
+                    sData.drizzleType = chosenType;
+                    if (sData.drizzleHex === 'none') {
+                        sData.drizzleHex = sData.chocoHex.toLowerCase() === '#f3e3c6' ? '#f48fb1' : '#f3e3c6';
+                    }
+                    if (chosenType === 'double' && sData.drizzleSecondHex === 'none') {
+                        sData.drizzleSecondHex = '#f48fb1';
+                    }
+                    updateStickDrizzleVisuals(idx);
+                });
+                updateBackupIfIndividual();
+                refreshPanelUIStates();
+                saveProgressToStorage();
+            });
+        });
+
+        document.querySelectorAll('.drizzle-layer-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const layerNum = parseInt(btn.getAttribute('data-drizzle-layer'), 10);
+                getTargetStickIndices().forEach(idx => {
+                    state.sticksData[idx].drizzleLayerTarget = layerNum;
+                });
+                refreshPanelUIStates();
+            });
+        });
+
         function setDrizzleColor(hexOrNone) {
+            const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
+            const isDoubleLayer2 = state.sticksData[refIdx].drizzleType === 'double' && state.sticksData[refIdx].drizzleLayerTarget === 2;
+
             getTargetStickIndices().forEach(idx => {
-                state.sticksData[idx].drizzleHex = hexOrNone;
-                if (hexOrNone === 'none') {
-                    sticks[idx].drizzleMesh.visible = false;
+                if (isDoubleLayer2) {
+                    state.sticksData[idx].drizzleSecondHex = hexOrNone;
                 } else {
-                    sticks[idx].drizzleMesh.visible = true;
-                    sticks[idx].drizzleMat.color.copy(getStickChocoColor(hexOrNone));
+                    state.sticksData[idx].drizzleHex = hexOrNone;
                 }
+                updateStickDrizzleVisuals(idx);
             });
             updateBackupIfIndividual();
             refreshPanelUIStates();
@@ -2831,7 +3282,9 @@
         });
         document.getElementById('btn-palette-drizzle').addEventListener('click', () => {
             const refIdx = state.syncSticks ? 0 : state.activeStickIndex;
-            const cur = state.sticksData[refIdx].drizzleHex;
+            const sData = state.sticksData[refIdx];
+            const isDoubleLayer2 = sData.drizzleType === 'double' && sData.drizzleLayerTarget === 2;
+            const cur = isDoubleLayer2 ? sData.drizzleSecondHex : sData.drizzleHex;
             openCustomColorPicker('드리즐 색상 지정', cur === 'none' ? '#f48fb1' : cur, setDrizzleColor);
         });
 
@@ -2854,9 +3307,7 @@
             reader.readAsDataURL(file);
             e.target.value = '';
         });
-        document.querySelectorAll('.preset-plaque-btn').forEach(btn => {
-            btn.addEventListener('click', () => applyPlaqueToTargets(createSampleDataURL(btn.getAttribute('data-preset'))));
-        });
+
         function setPlaqueBorderColor(hex) {
             getTargetStickIndices().forEach(idx => {
                 state.sticksData[idx].plaqueBorderColor = hex;
@@ -2939,16 +3390,6 @@
             if (!state.tagActive) setTagActiveState(true, false);
             saveProgressToStorage();
         });
-        document.querySelectorAll('.quick-msg-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const msg = btn.getAttribute('data-msg');
-                inputTagText.value = msg;
-                state.tagText = msg;
-                updateKraftTagTexture(msg);
-                if (!state.tagActive) setTagActiveState(true, false);
-                saveProgressToStorage();
-            });
-        });
 
         btnToggleStripe.addEventListener('click', () => {
             state.stripeBg = !state.stripeBg;
@@ -2989,6 +3430,7 @@
         document.getElementById('btn-reset').addEventListener('click', () => {
             cancelAllActiveDrags();
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('pepero_atelier_saved_v37');
             localStorage.removeItem('pepero_atelier_saved_v36');
             stickersList.forEach(st => {
                 if (typeof st.stopDrag === 'function') st.stopDrag(false);
@@ -3224,6 +3666,7 @@
         window.onload = function () {
             adjustResponsiveSize();
             loadProgressFromStorage();
+            refreshPanelUIStates();
             animate();
         };
     </script>
