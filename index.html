@@ -491,7 +491,6 @@
                     <button class="close-panel text-amber-900/60 hover:text-amber-950 text-sm px-1"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
-                <!-- 상단: 드리즐 종류 선택 영역 -->
                 <div class="bg-white/60 rounded-2xl p-2 mb-2.5">
                     <div class="flex items-center justify-between px-1 mb-1.5">
                         <span class="text-[11px] font-bold text-amber-950">드리즐 모양 선택</span>
@@ -508,7 +507,7 @@
                             사선 스월
                         </button>
                         <button data-drizzle-type="double" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition">
-                            더블
+                            체크 격자
                         </button>
                         <button data-drizzle-type="drip" class="drizzle-type-btn py-1.5 px-1 rounded-xl text-[11px] font-semibold bg-white/80 text-amber-950 hover:bg-white transition">
                             상단 드립
@@ -516,7 +515,6 @@
                     </div>
                 </div>
 
-                <!-- 하단: 드리즐 색상 선택 영역 -->
                 <div class="grid grid-cols-5 gap-2 text-center">
                     <button data-drizzle-hex="none" class="drizzle-opt swatch-btn selected flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/60 hover:bg-white">
                         <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs"><i class="fa-solid fa-ban"></i></span>
@@ -786,10 +784,10 @@
             };
         }
 
-        function normalizeStickState(rawStick) {
+function normalizeStickState(rawStick) {
             const def = createDefaultStickState();
             if (!rawStick || typeof rawStick !== 'object') return def;
-            return {
+            const merged = {
                 ...def,
                 ...rawStick,
                 toppings: {
@@ -797,6 +795,10 @@
                     ...(rawStick.toppings || {})
                 }
             };
+            if (merged.drizzleType === 'double') {
+                merged.drizzleType = 'zigzag';
+            }
+            return merged;
         }
 
         const state = {
@@ -1144,7 +1146,7 @@
             return CHOCO_RADIUS * (1 + wave);
         }
 
-        function createOrganicDrizzleGeometry(seed, radiusLift = 0.016, phaseOffset = 0, yShift = 0) {
+        function createOrganicDrizzleGeometry(seed, radiusLift = 0.020, phaseOffset = 2.2, yShift = 0.045) {
             const drizzlePoints = [];
             const startY = CHOCO_BOTTOM_Y + 0.32;
             const endY = CHOCO_TOP_Y - 0.30;
@@ -1215,23 +1217,40 @@
         }
 
         function createSwirlDrizzleGeometry(seed, radiusLift = 0.016, direction = 1) {
-            const slashCount = 4; 
-            const startY = CHOCO_BOTTOM_Y + 0.55;
-            const endY = CHOCO_TOP_Y - 0.55;
+            const startY = CHOCO_BOTTOM_Y + 0.50;
+            const endY = CHOCO_TOP_Y - 0.50;
             const spanY = endY - startY;
-            const bandStep = spanY / slashCount;
 
             const geometries = [];
             const rand = seededRandom(seed + (direction > 0 ? 31 : 89));
 
-            for (let s = 0; s < slashCount; s++) {
+            const rhythmPatterns = [
+                [0.07, 0.19, 0.51, 0.62, 0.90],
+                [0.09, 0.38, 0.49, 0.60, 0.89], 
+                [0.08, 0.20, 0.55, 0.80, 0.92]  
+            ];
+            const baseFractions = rhythmPatterns[Math.floor(rand() * rhythmPatterns.length)].slice();
+
+            if (rand() > 0.5) {
+                for (let i = 0; i < baseFractions.length; i++) {
+                    baseFractions[i] = 1.0 - baseFractions[i];
+                }
+                baseFractions.sort((a, b) => a - b);
+            }
+
+            const radiusPool = [0.045, 0.027, 0.039, 0.029, 0.043];
+
+            for (let s = 0; s < baseFractions.length; s++) {
                 const pts = [];
                 const subSteps = 44;
 
-                const baseBandY = startY + (s + 0.5) * bandStep + (rand() - 0.5) * 0.14;
-                const slantHeight = (0.68 + rand() * 0.24) * direction;
+                const jitterFrac = (rand() - 0.5) * 0.032;
+                const frac = Math.max(0.04, Math.min(0.96, baseFractions[s] + jitterFrac));
+                const baseBandY = startY + frac * spanY;
+
+                const slantHeight = (0.54 + rand() * 0.36) * direction;
                 const wavePhase = rand() * Math.PI * 2;
-                const waveAmp = 0.045 + rand() * 0.035;
+                const waveAmp = 0.035 + rand() * 0.045;
 
                 const startTheta = -1.42;
                 const endTheta = 1.42;
@@ -1259,14 +1278,21 @@
                 const curve = new THREE.CatmullRomCurve3(pts);
                 const segs = 48;
                 const radSegs = 10;
-                const tubeGeo = new THREE.TubeGeometry(curve, segs, 0.038, radSegs, false);
+
+                const strokeBaseRadius = radiusPool[(s + Math.floor(rand() * 3)) % radiusPool.length] * (0.90 + rand() * 0.22);
+                const tubeGeo = new THREE.TubeGeometry(curve, segs, strokeBaseRadius, radSegs, false);
 
                 const pos = tubeGeo.attributes.position;
                 const ringSize = radSegs + 1;
+                const thickAsymmetry = (rand() - 0.5) * 0.35;
+
                 for (let seg = 0; seg <= segs; seg++) {
                     const u = seg / segs;
                     const centerPt = curve.getPointAt(u);
-                    const thick = (0.88 + Math.sin(u * Math.PI) * 0.22) * (1 + Math.sin(u * Math.PI * 5 + wavePhase) * 0.10);
+
+                    const envelope = 0.80 + Math.sin(u * Math.PI) * 0.28 + (u - 0.5) * thickAsymmetry;
+                    const ripple = 1.0 + Math.sin(u * Math.PI * 3 + wavePhase) * 0.22 + Math.cos(u * Math.PI * 6 - wavePhase) * 0.12;
+                    const thick = Math.max(0.42, envelope * ripple);
 
                     for (let rIdx = 0; rIdx < ringSize; rIdx++) {
                         const idx = seg * ringSize + rIdx;
@@ -1304,8 +1330,8 @@
             return mergedGeo;
         }
 
-        function createDoubleSecondDrizzleGeometry(seed) {
-            return createOrganicDrizzleGeometry(seed, 0.028, 2.2, 0.045);
+function createDoubleSecondDrizzleGeometry(seed) {
+            return createSwirlDrizzleGeometry(seed + 73, 0.028, -1);
         }
 
         function createTopDripGeometry(seed) {
@@ -1742,7 +1768,7 @@
 
             if (type === 'double') {
                 if (hex1 !== 'none') {
-                    zigzag.visible = true;
+                    swirl.visible = true;
                     stickObj.drizzleMat.color.copy(getStickChocoColor(hex1));
                 }
                 if (hex2 !== 'none') {
@@ -3269,8 +3295,8 @@
                     if (sData.drizzleHex === 'none') {
                         sData.drizzleHex = sData.chocoHex.toLowerCase() === '#f3e3c6' ? '#f48fb1' : '#f3e3c6';
                     }
-                    if (chosenType === 'double' && sData.drizzleSecondHex === 'none') {
-                        sData.drizzleSecondHex = '#f48fb1';
+                    if (chosenType === 'double') {
+                        sData.drizzleSecondHex = sData.drizzleHex;
                     }
                     updateStickDrizzleVisuals(idx);
                 });
