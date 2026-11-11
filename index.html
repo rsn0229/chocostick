@@ -289,6 +289,12 @@
             background: rgba(92, 58, 33, 0.28);
             border-radius: 9999px;
         }
+        .export-touch-enable {
+            user-select: auto !important;
+            -webkit-user-select: auto !important;
+            -webkit-touch-callout: default !important;
+            pointer-events: auto !important;
+        }
     </style>
 </head>
 <body>
@@ -756,6 +762,32 @@
         </div>
     </div>
 
+    <div id="export-preview-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div class="glass-panel rounded-3xl p-4 w-full max-w-xs shadow-2xl popover-enter flex flex-col items-center">
+            <div class="w-full flex items-center justify-between mb-2.5">
+                <span class="text-xs font-bold text-amber-950">
+                    <i class="fa-solid fa-camera mr-1.5 text-amber-800"></i>완성된 막대과자 저장
+                </span>
+                <button id="btn-close-export-modal" class="text-amber-900/70 hover:text-amber-950 text-sm px-1.5">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="w-full bg-amber-900/10 border border-amber-900/15 rounded-2xl px-3 py-2 mb-3 text-center">
+                <p class="text-[11px] font-bold text-amber-950">모바일에서 접속하셨나요?</p>
+                <p class="text-[10px] text-amber-800 mt-0.5">아래 이미지를 <b>길게 누르면</b> 바로 저장돼요!</p>
+            </div>
+
+            <div class="w-full aspect-[3/4] max-h-[50vh] rounded-2xl overflow-hidden border border-amber-900/15 shadow-inner bg-white/60 mb-3 flex items-center justify-center">
+                <img id="export-preview-img" src="" alt="완성된 수제 막대과자" class="export-touch-enable w-full h-full object-contain">
+            </div>
+
+            <button id="btn-modal-download" class="w-full bg-amber-900 hover:bg-amber-800 active:scale-[0.98] text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-md flex items-center justify-center gap-1.5 transition">
+                <i class="fa-solid fa-download"></i>
+                <span>직접 다운로드</span>
+            </button>
+        </div>
+    </div>
     <script>
         const STORAGE_KEY = 'pepero_atelier_saved_v38';
 
@@ -3711,13 +3743,60 @@ if (state.wrapped) {
             adjustResponsiveSize();
             renderMultiLayerScene();
 
-            const dataURL = exportCanvas.toDataURL('image/png');
+            const previewDataUrl = exportCanvas.toDataURL('image/png');
+            const exportModal = document.getElementById('export-preview-modal');
+            const exportPreviewImg = document.getElementById('export-preview-img');
+            exportPreviewImg.src = previewDataUrl;
+            exportModal.classList.remove('hidden');
+
+            exportCanvas.toBlob((blob) => {
+                if (!blob) return;
+
+                if (window._currentPeperoBlobUrl) {
+                    URL.revokeObjectURL(window._currentPeperoBlobUrl);
+                }
+                window._currentPeperoBlobUrl = URL.createObjectURL(blob);
+            }, 'image/png');
+        });
+
+        function triggerSafeBlobDownload(blobUrl) {
+            if (!blobUrl) return;
+            const now = new Date();
+            const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+
             const link = document.createElement('a');
-            link.download = `막대과자.png`;
-            link.href = dataURL;
+            link.style.display = 'none';
+            link.href = blobUrl;
+            link.download = `pepero_${stamp}.png`;
+
+            document.body.appendChild(link);
             link.click();
 
-            showToastMessage('이미지를 저장했습니다!');
+            setTimeout(() => {
+                if (link.parentNode) {
+                    document.body.removeChild(link);
+                }
+            }, 150);
+
+            showToastMessage('다운로드를 시작했습니다!');
+        }
+
+        document.getElementById('btn-modal-download').addEventListener('click', () => {
+            if (window._currentPeperoBlobUrl) {
+                triggerSafeBlobDownload(window._currentPeperoBlobUrl);
+            } else {
+                const fallbackUrl = document.getElementById('export-preview-img').src;
+                triggerSafeBlobDownload(fallbackUrl);
+            }
+        });
+
+        document.getElementById('btn-close-export-modal').addEventListener('click', () => {
+            document.getElementById('export-preview-modal').classList.add('hidden');
+        });
+        document.getElementById('export-preview-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'export-preview-modal') {
+                e.currentTarget.classList.add('hidden');
+            }
         });
 
         function animate() {
